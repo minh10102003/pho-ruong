@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "Pho Restaurant",
+    "slug": "pho-restaurant",
+    "version": "1.0.0",
+    "orientation": "default",
+    "icon": "./assets/icon.png",
+    "scheme": "pho-restaurant",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#468432"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.pho.restaurant"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#468432"
+      },
+      "package": "com.pho.restaurant"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-asset"
+    ]
+  }
+}

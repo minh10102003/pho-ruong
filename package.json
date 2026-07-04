@@ -1,0 +1,11 @@
+{
+  "name": "pho-restaurant-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Monorepo - Quản lý bán hàng quán phở",
+  "scripts": {
+    "backend": "cd backend && npm run dev",
+    "frontend": "cd frontend && npx expo start",
+    "db:setup": "cd backend && npx prisma db push && npm run db:seed"
+  }
+}

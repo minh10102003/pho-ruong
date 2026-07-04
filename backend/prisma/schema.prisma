@@ -1,0 +1,181 @@
+// Prisma Schema - Ứng dụng Quản lý Bán hàng Quán Phở
+// Database: PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- ENUM ---
+
+enum OrderStatus {
+  PENDING    // Chờ
+  PREPARING  // Đang làm
+  SERVED     // Đã ra món
+  PAID       // Đã thanh toán
+}
+
+enum PaymentMethod {
+  CASH       // Tiền mặt
+  TRANSFER   // Chuyển khoản
+}
+
+enum EmployeeRole {
+  OWNER
+  MANAGER
+  STAFF
+  CASHIER
+}
+
+// --- MENU & ĐƠN HÀNG ---
+
+/// Món ăn trên thực đơn (Phở chín, Phở tái, Quẩy...)
+model MenuItem {
+  id          String      @id @default(uuid())
+  name        String
+  description String?
+  price       Decimal     @db.Decimal(12, 2)
+  category    String      // pho, side, drink
+  isActive    Boolean     @default(true)
+  imageUrl    String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  orderItems  OrderItem[]
+
+  @@map("menu_items")
+}
+
+/// Đơn hàng POS
+model Order {
+  id          String      @id @default(uuid())
+  orderNumber String      @unique
+  status      OrderStatus @default(PENDING)
+  note        String?
+  subtotal    Decimal     @db.Decimal(12, 2)
+  taxAmount   Decimal     @default(0) @db.Decimal(12, 2)
+  total       Decimal     @db.Decimal(12, 2)
+  tableNumber   String?
+  paymentMethod PaymentMethod?
+  invoiceNumber String?
+  createdAt     DateTime       @default(now())
+  updatedAt   DateTime    @updatedAt
+  paidAt      DateTime?
+  items       OrderItem[]
+
+  @@map("orders")
+}
+
+/// Chi tiết món trong đơn hàng
+model OrderItem {
+  id         String   @id @default(uuid())
+  orderId    String
+  menuItemId String
+  quantity   Int      @default(1)
+  unitPrice  Decimal  @db.Decimal(12, 2)
+  lineTotal  Decimal  @db.Decimal(12, 2)
+  note       String?
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id])
+
+  @@map("order_items")
+}
+
+// --- KHO & NHẬP HÀNG ---
+
+/// Nguyên liệu (Bánh phở, Thịt bò, Gia vị...)
+model Ingredient {
+  id          String             @id @default(uuid())
+  category    String             @default("Khác")
+  name        String
+  unit        String             // kg, lít, gói...
+  stockQty    Decimal            @default(0) @db.Decimal(12, 3)
+  minStock    Decimal            @default(0) @db.Decimal(12, 3)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  receipts    InventoryReceipt[]
+
+  @@map("ingredients")
+}
+
+/// Phiếu nhập kho
+model InventoryReceipt {
+  id           String     @id @default(uuid())
+  receiptCode  String     @unique
+  ingredientId String
+  quantity     Decimal    @db.Decimal(12, 3)
+  unitPrice    Decimal    @db.Decimal(12, 2)
+  totalCost    Decimal    @db.Decimal(12, 2)
+  supplier     String
+  note         String?
+  receivedAt   DateTime   @default(now())
+  createdAt    DateTime   @default(now())
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
+
+  @@map("inventory_receipts")
+}
+
+// --- NHÂN VIÊN & CHẤM CÔNG ---
+
+/// Nhân viên
+model Employee {
+  id          String       @id @default(uuid())
+  fullName    String
+  phone       String?
+  role        EmployeeRole @default(STAFF)
+  hourlyRate  Decimal      @db.Decimal(12, 2) // Lương theo giờ
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  timesheets  Timesheet[]
+
+  @@map("employees")
+}
+
+/// Chấm công Check-in / Check-out
+model Timesheet {
+  id         String    @id @default(uuid())
+  employeeId String
+  checkIn    DateTime
+  checkOut   DateTime?
+  note       String?
+  createdAt  DateTime  @default(now())
+  employee   Employee  @relation(fields: [employeeId], references: [id])
+
+  @@map("timesheets")
+}
+
+// --- CẤU HÌNH THUẾ ---
+
+/// Cấu hình thuế (VAT hoặc thuế khoán)
+model TaxConfig {
+  id        String   @id @default(uuid())
+  name      String   @default("VAT")
+  rate      Decimal  @db.Decimal(5, 2) // % thuế, ví dụ 8.00
+  isFlat    Boolean  @default(false)    // true = thuế khoán cố định
+  flatAmount Decimal? @db.Decimal(12, 2)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("tax_configs")
+}
+
+// --- CẤU HÌNH THANH TOÁN ---
+
+/// Cấu hình thanh toán (mã QR chuyển khoản...)
+model PaymentConfig {
+  id            String   @id @default("default-payment")
+  shopName      String   @default("RUỘNG")
+  shopAddress   String?
+  shopPhone     String?
+  logoUrl       String?
+  transferQrUrl String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("payment_configs")
+}
