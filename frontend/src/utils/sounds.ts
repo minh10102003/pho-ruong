@@ -215,10 +215,7 @@ function enqueueOrderAnnouncement(task: () => Promise<void>) {
 
 function runOrderAnnouncement(table: number, phase: SoundPhase) {
   if (phase === 'gesture') {
-    if (Platform.OS === 'web') {
-      preloadOrderAnnouncementSounds();
-      void playWebClip(ORDER_ANNOUNCE.banSo);
-    }
+    preloadOrderAnnouncementSounds();
     return;
   }
 
@@ -236,10 +233,7 @@ function runOrderAnnouncement(table: number, phase: SoundPhase) {
 export function playOrderAnnouncement(table: number, phase: SoundPhase = 'success') {
   if (table === COUNTER_TABLE_NUMBER) {
     if (phase === 'gesture') {
-      if (Platform.OS === 'web') {
-        preloadOrderAnnouncementSounds();
-        void playWebClip(ORDER_ANNOUNCE.banSo);
-      }
+      preloadOrderAnnouncementSounds();
       return;
     }
 

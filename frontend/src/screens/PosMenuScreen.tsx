@@ -317,7 +317,6 @@ export default function PosMenuScreen() {
   const handleSubmitCart = async () => {
     if (cart.length === 0 || selectedTable === null) return;
 
-    playOrderAnnouncement(selectedTable, 'gesture');
     const order = await submitOrder();
     if (!order) return;
 
