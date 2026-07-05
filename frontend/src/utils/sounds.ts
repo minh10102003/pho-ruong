@@ -1,21 +1,43 @@
 import { Audio as ExpoAudio, AVPlaybackStatus } from 'expo-av';
 import { Platform } from 'react-native';
+import { COUNTER_TABLE_NUMBER } from '../constants/tables';
 
 type SoundModule = number | string;
 
 const SOUNDS = {
-  order: require('../../assets/sounds/order.wav') as SoundModule,
   cash: require('../../assets/sounds/cash.wav') as SoundModule,
   transfer: require('../../assets/sounds/card.wav') as SoundModule,
 } as const;
 
-type SoundKey = keyof typeof SOUNDS;
+const ORDER_ANNOUNCE = {
+  banSo: require('../../assets/sounds/dat_mon_ban_so.mp3') as SoundModule,
+  datMon: require('../../assets/sounds/dat_mon_dat_mon.mp3') as SoundModule,
+  tables: {
+    1: require('../../assets/sounds/table-1.mp3') as SoundModule,
+    2: require('../../assets/sounds/table-2.mp3') as SoundModule,
+    3: require('../../assets/sounds/table-3.mp3') as SoundModule,
+    4: require('../../assets/sounds/table-4.mp3') as SoundModule,
+    5: require('../../assets/sounds/table-5.mp3') as SoundModule,
+    6: require('../../assets/sounds/table-6.mp3') as SoundModule,
+    7: require('../../assets/sounds/table-7.mp3') as SoundModule,
+    8: require('../../assets/sounds/table-8.mp3') as SoundModule,
+    9: require('../../assets/sounds/table-9.mp3') as SoundModule,
+    10: require('../../assets/sounds/table-10.mp3') as SoundModule,
+    11: require('../../assets/sounds/table-11.mp3') as SoundModule,
+  } as Record<number, SoundModule>,
+};
 
+type PaymentSoundKey = keyof typeof SOUNDS;
 export type SoundPhase = 'gesture' | 'success';
 
-const activeSounds = new Map<SoundKey, ExpoAudio.Sound>();
-const webAudioTemplates = new Map<SoundKey, HTMLAudioElement>();
+const webAudioTemplates = new Map<string, HTMLAudioElement>();
 let webAudioUnlocked = false;
+let nativeSequenceSound: ExpoAudio.Sound | null = null;
+let orderAnnouncementQueue: Promise<void> = Promise.resolve();
+
+function clipKey(source: SoundModule): string {
+  return String(source);
+}
 
 function resolveSoundUri(source: SoundModule): string {
   if (typeof source === 'string') {
@@ -23,7 +45,12 @@ function resolveSoundUri(source: SoundModule): string {
   }
 
   if (Platform.OS === 'web') {
-    return '';
+    try {
+      const { Asset } = require('expo-asset') as typeof import('expo-asset');
+      return Asset.fromModule(source as number).uri;
+    } catch {
+      return '';
+    }
   }
 
   const { Image } = require('react-native') as typeof import('react-native');
@@ -35,11 +62,23 @@ function resolveSoundUri(source: SoundModule): string {
   return resolved?.uri ?? '';
 }
 
-function preloadWebSound(key: SoundKey) {
+function getOrderAnnouncementClips(table: number): SoundModule[] {
+  const clips: SoundModule[] = [ORDER_ANNOUNCE.banSo];
+
+  if (table >= 1 && table <= 11) {
+    clips.push(ORDER_ANNOUNCE.tables[table]);
+  }
+
+  clips.push(ORDER_ANNOUNCE.datMon);
+  return clips;
+}
+
+function preloadWebClip(source: SoundModule) {
+  const key = clipKey(source);
   if (webAudioTemplates.has(key)) return;
 
   try {
-    const uri = resolveSoundUri(SOUNDS[key]);
+    const uri = resolveSoundUri(source);
     if (!uri) return;
 
     const audio = new globalThis.Audio(uri);
@@ -47,12 +86,18 @@ function preloadWebSound(key: SoundKey) {
     audio.load();
     webAudioTemplates.set(key, audio);
   } catch {
-    // ignore — âm thanh không bắt buộc
+    // ignore
   }
 }
 
-function preloadWebSounds() {
-  (Object.keys(SOUNDS) as SoundKey[]).forEach(preloadWebSound);
+function preloadOrderAnnouncementSounds() {
+  preloadWebClip(ORDER_ANNOUNCE.banSo);
+  preloadWebClip(ORDER_ANNOUNCE.datMon);
+  Object.values(ORDER_ANNOUNCE.tables).forEach(preloadWebClip);
+}
+
+function preloadPaymentSounds() {
+  (Object.keys(SOUNDS) as PaymentSoundKey[]).forEach((key) => preloadWebClip(SOUNDS[key]));
 }
 
 function unlockWebAudio() {
@@ -60,9 +105,10 @@ function unlockWebAudio() {
   webAudioUnlocked = true;
 
   try {
-    preloadWebSounds();
+    preloadOrderAnnouncementSounds();
+    preloadPaymentSounds();
 
-    const template = webAudioTemplates.get('order');
+    const template = webAudioTemplates.get(clipKey(ORDER_ANNOUNCE.banSo));
     if (!template) return;
 
     const unlockClip = template.cloneNode(true) as HTMLAudioElement;
@@ -90,86 +136,151 @@ export function installAudioUnlock() {
   document.addEventListener('touchstart', onFirstInteraction, { passive: true });
 }
 
-function playWebSoundSync(key: SoundKey) {
-  try {
-    preloadWebSound(key);
-
-    const template = webAudioTemplates.get(key);
-    if (!template) return;
-
-    const audio = template.cloneNode(true) as HTMLAudioElement;
-    audio.currentTime = 0;
-    void audio.play();
-  } catch {
+function playWebClip(source: SoundModule): Promise<void> {
+  return new Promise((resolve) => {
     try {
-      const template = webAudioTemplates.get(key);
-      if (!template) return;
-      template.currentTime = 0;
-      void template.play();
+      preloadWebClip(source);
+
+      const template = webAudioTemplates.get(clipKey(source));
+      if (!template) {
+        resolve();
+        return;
+      }
+
+      const audio = template.cloneNode(true) as HTMLAudioElement;
+      audio.currentTime = 0;
+
+      const finish = () => {
+        audio.removeEventListener('ended', finish);
+        audio.removeEventListener('error', finish);
+        resolve();
+      };
+
+      audio.addEventListener('ended', finish);
+      audio.addEventListener('error', finish);
+      void audio.play().catch(finish);
     } catch {
-      // ignore
+      resolve();
     }
+  });
+}
+
+async function playWebSequence(clips: SoundModule[]) {
+  for (const clip of clips) {
+    await playWebClip(clip);
   }
 }
 
-async function unloadNativeSound(key: SoundKey) {
-  const sound = activeSounds.get(key);
-  if (!sound) return;
+async function unloadNativeSequenceSound() {
+  if (!nativeSequenceSound) return;
   try {
-    await sound.unloadAsync();
+    await nativeSequenceSound.unloadAsync();
   } catch {
     // ignore
   }
-  activeSounds.delete(key);
+  nativeSequenceSound = null;
 }
 
-async function playNativeSound(key: SoundKey) {
-  try {
-    await ExpoAudio.setAudioModeAsync({
-      playsInSilentModeIOS: true,
-    });
+async function playNativeClip(source: SoundModule): Promise<void> {
+  await unloadNativeSequenceSound();
 
-    await unloadNativeSound(key);
+  await ExpoAudio.setAudioModeAsync({
+    playsInSilentModeIOS: true,
+  });
 
-    const { sound } = await ExpoAudio.Sound.createAsync(SOUNDS[key] as number);
-    activeSounds.set(key, sound);
+  return new Promise((resolve) => {
+    void ExpoAudio.Sound.createAsync(source as number)
+      .then(({ sound }) => {
+        nativeSequenceSound = sound;
+        sound.setOnPlaybackStatusUpdate((status: AVPlaybackStatus) => {
+          if (status.isLoaded && status.didJustFinish) {
+            void unloadNativeSequenceSound().finally(resolve);
+          }
+        });
+        void sound.playAsync();
+      })
+      .catch(() => resolve());
+  });
+}
 
-    sound.setOnPlaybackStatusUpdate((status: AVPlaybackStatus) => {
-      if (status.isLoaded && status.didJustFinish) {
-        void unloadNativeSound(key);
-      }
-    });
-
-    await sound.playAsync();
-  } catch {
-    await unloadNativeSound(key);
+async function playNativeSequence(clips: SoundModule[]) {
+  for (const clip of clips) {
+    await playNativeClip(clip);
   }
 }
 
-function playSound(key: SoundKey, phase: SoundPhase = 'success') {
-  if (Platform.OS === 'web') {
-    if (phase === 'gesture') {
-      playWebSoundSync(key);
+function enqueueOrderAnnouncement(task: () => Promise<void>) {
+  orderAnnouncementQueue = orderAnnouncementQueue.then(task).catch(() => undefined);
+}
+
+function runOrderAnnouncement(table: number, phase: SoundPhase) {
+  if (phase === 'gesture') {
+    if (Platform.OS === 'web') {
+      preloadOrderAnnouncementSounds();
+      void playWebClip(ORDER_ANNOUNCE.banSo);
     }
     return;
   }
 
-  if (phase === 'success') {
-    void playNativeSound(key);
-  }
+  const clips = getOrderAnnouncementClips(table);
+  enqueueOrderAnnouncement(async () => {
+    if (Platform.OS === 'web') {
+      await playWebSequence(clips);
+      return;
+    }
+    await playNativeSequence(clips);
+  });
 }
 
-/** Phát tiếng báo khi đặt món thành công */
+/** Phát: "Bàn số" → [số bàn] → "đặt món" */
+export function playOrderAnnouncement(table: number, phase: SoundPhase = 'success') {
+  if (table === COUNTER_TABLE_NUMBER) {
+    if (phase === 'gesture') {
+      if (Platform.OS === 'web') {
+        preloadOrderAnnouncementSounds();
+        void playWebClip(ORDER_ANNOUNCE.banSo);
+      }
+      return;
+    }
+
+    enqueueOrderAnnouncement(async () => {
+      const clips = [ORDER_ANNOUNCE.banSo, ORDER_ANNOUNCE.datMon];
+      if (Platform.OS === 'web') {
+        await playWebSequence(clips);
+        return;
+      }
+      await playNativeSequence(clips);
+    });
+    return;
+  }
+
+  runOrderAnnouncement(table, phase);
+}
+
+/** @deprecated Dùng playOrderAnnouncement(table) */
 export function playOrderSuccessSound(phase: SoundPhase = 'success') {
-  playSound('order', phase);
+  playOrderAnnouncement(1, phase);
+}
+
+function playPaymentSound(key: PaymentSoundKey, phase: SoundPhase = 'success') {
+  const source = SOUNDS[key];
+
+  if (Platform.OS === 'web') {
+    void playWebClip(source);
+    return;
+  }
+
+  if (phase === 'success') {
+    void playNativeClip(source);
+  }
 }
 
 /** Phát tiếng báo khi thanh toán tiền mặt thành công */
 export function playCashPaymentSound(phase: SoundPhase = 'success') {
-  playSound('cash', phase);
+  playPaymentSound('cash', phase);
 }
 
 /** Phát tiếng báo khi thanh toán chuyển khoản thành công */
 export function playTransferPaymentSound(phase: SoundPhase = 'success') {
-  playSound('transfer', phase);
+  playPaymentSound('transfer', phase);
 }

@@ -36,7 +36,7 @@ import { formatCurrency } from '../utils/format';
 import { CartItem, MenuItem } from '../types';
 import { useOrderRealtime } from '../hooks/useOrderRealtime';
 import { isProcessingOrder } from '../utils/posCart';
-import { playOrderSuccessSound } from '../utils/sounds';
+import { playOrderAnnouncement } from '../utils/sounds';
 import { useOrderManageStore } from '../store/orderManageStore';
 
 function chunkRow<T>(items: T[], columns: number): T[][] {
@@ -317,11 +317,11 @@ export default function PosMenuScreen() {
   const handleSubmitCart = async () => {
     if (cart.length === 0 || selectedTable === null) return;
 
-    playOrderSuccessSound('gesture');
+    playOrderAnnouncement(selectedTable, 'gesture');
     const order = await submitOrder();
     if (!order) return;
 
-    playOrderSuccessSound('success');
+    playOrderAnnouncement(selectedTable, 'success');
     await useOrderManageStore.getState().fetchAll();
     Alert.alert(
       'Thành công',
