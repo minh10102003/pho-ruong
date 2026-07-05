@@ -468,7 +468,8 @@ export default function OrderManageScreen() {
   } = useOrderManageStore();
   const { setSelectedTable, clearCart, closeCart } = usePosStore();
   const user = useAuthStore((s) => s.user);
-  const canPayOrders = user?.role === 'MANAGER' || user?.role === 'ADMIN';
+  const canPayOrders =
+    user?.role === 'STAFF' || user?.role === 'MANAGER' || user?.role === 'ADMIN';
   const canDeleteHistory = user?.role === 'MANAGER' || user?.role === 'ADMIN';
 
   useFocusEffect(
