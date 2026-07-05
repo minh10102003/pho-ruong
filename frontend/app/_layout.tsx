@@ -6,6 +6,7 @@ import AppLoadingScreen from '../src/components/AppLoadingScreen';
 import { useAuthStore, getRoleHomePath } from '../src/store/authStore';
 
 const SPLASH_MIN_MS = 1200;
+const HYDRATION_TIMEOUT_MS = 3000;
 
 export default function RootLayout() {
   const router = useRouter();
@@ -13,6 +14,7 @@ export default function RootLayout() {
   const hydrated = useAuthStore((s) => s.hydrated);
   const user = useAuthStore((s) => s.user);
   const restoreSession = useAuthStore((s) => s.restoreSession);
+  const setHydrated = useAuthStore((s) => s.setHydrated);
   const [ready, setReady] = useState(false);
   const [sessionChecked, setSessionChecked] = useState(false);
 
@@ -21,6 +23,15 @@ export default function RootLayout() {
     const timer = setTimeout(() => setReady(true), SPLASH_MIN_MS);
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!useAuthStore.getState().hydrated) {
+        setHydrated(true);
+      }
+    }, HYDRATION_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [setHydrated]);
 
   useEffect(() => {
     if (!hydrated || !ready || sessionChecked) return;
@@ -38,9 +49,11 @@ export default function RootLayout() {
     if (!ready || !hydrated || !sessionChecked) return;
 
     const inAuthGroup = segments[0] === 'login';
+    const rootSegment = segments[0] as string | undefined;
+    const onBootstrap = rootSegment === undefined;
     const currentUser = useAuthStore.getState().user;
 
-    if (!currentUser && !inAuthGroup && segments[0] !== undefined) {
+    if (!currentUser && !inAuthGroup && !onBootstrap) {
       router.replace('/login');
       return;
     }
@@ -66,17 +79,18 @@ export default function RootLayout() {
     }
   }, [ready, hydrated, sessionChecked, segments, router, user]);
 
-  if (!ready || !hydrated || !sessionChecked) {
-    return <AppLoadingScreen />;
-  }
+  const showSplash = !ready || !hydrated || !sessionChecked;
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="index" />
-      <Stack.Screen name="login" />
-      <Stack.Screen name="manager" />
-      <Stack.Screen name="staff" />
-      <Stack.Screen name="admin" />
-    </Stack>
+    <>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="login" />
+        <Stack.Screen name="manager" />
+        <Stack.Screen name="staff" />
+        <Stack.Screen name="admin" />
+      </Stack>
+      {showSplash ? <AppLoadingScreen /> : null}
+    </>
   );
 }

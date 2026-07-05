@@ -7,6 +7,11 @@ services:
     rootDir: frontend
     buildCommand: npm install && npm run export:web
     staticPublishPath: dist
+    envVars:
+      - key: EXPO_PUBLIC_API_ORIGIN
+        value: https://pho-ruong-api.onrender.com
+      - key: EXPO_PUBLIC_WS_URL
+        value: wss://pho-ruong-api.onrender.com/ws
     routes:
       - type: rewrite
         source: /*
