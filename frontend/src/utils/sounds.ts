@@ -9,6 +9,8 @@ const SOUNDS = {
   transfer: require('../../assets/sounds/card.wav') as SoundModule,
 } as const;
 
+const UNLOCK_SOUND = require('../../assets/sounds/start.wav') as SoundModule;
+
 const ORDER_ANNOUNCE = {
   banSo: require('../../assets/sounds/dat_mon_ban_so.mp3') as SoundModule,
   datMon: require('../../assets/sounds/dat_mon_dat_mon.mp3') as SoundModule,
@@ -107,11 +109,12 @@ function unlockWebAudio() {
   webAudioUnlocked = true;
 
   try {
+    preloadWebClip(UNLOCK_SOUND);
     preloadOrderAnnouncementSounds();
     preloadPaymentSounds();
 
-    // Mở khóa Safari — dùng clip thanh toán ngắn, không dùng "Bàn số"
-    const template = webAudioTemplates.get(clipKey(SOUNDS.cash));
+    // Mở khóa Safari — start.wav, không dùng "Bàn số"
+    const template = webAudioTemplates.get(clipKey(UNLOCK_SOUND));
     if (!template) return;
 
     const unlockClip = template.cloneNode(true) as HTMLAudioElement;
