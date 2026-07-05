@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../src/constants';
 import { installAudioUnlock } from '../src/utils/sounds';
 import AppLoadingScreen from '../src/components/AppLoadingScreen';
+import { SettingsHeaderButton } from '../src/components/SettingsHeaderButton';
 
 const TAB_BAR_HEIGHT = 76;
 const TAB_ICON_SIZE = 28;
@@ -44,6 +45,7 @@ export default function RootLayout() {
         headerStyle: { backgroundColor: COLORS.primary },
         headerTintColor: '#FFF',
         headerTitleStyle: { fontWeight: '700' },
+        headerRight: () => <SettingsHeaderButton />,
       }}
     >
       <Tabs.Screen
@@ -96,9 +98,7 @@ export default function RootLayout() {
         name="settings"
         options={{
           title: 'Cài đặt',
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="settings" size={TAB_ICON_SIZE} color={color} />
-          ),
+          href: null,
         }}
       />
     </Tabs>

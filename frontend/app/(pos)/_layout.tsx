@@ -1,5 +1,6 @@
 import { Stack } from 'expo-router';
 import { COLORS } from '../../src/constants';
+import { SettingsHeaderButton } from '../../src/components/SettingsHeaderButton';
 
 // Stack navigation trong tab POS: Bàn → Món → Đơn
 export default function PosLayout() {
@@ -9,6 +10,7 @@ export default function PosLayout() {
         headerStyle: { backgroundColor: COLORS.primary },
         headerTintColor: '#FFF',
         headerTitleStyle: { fontWeight: '700' },
+        headerRight: () => <SettingsHeaderButton />,
       }}
     >
       <Stack.Screen name="index" options={{ title: 'Chọn bàn' }} />
