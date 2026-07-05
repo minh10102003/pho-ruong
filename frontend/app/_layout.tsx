@@ -1,6 +1,6 @@
 import 'react-native-gesture-handler';
 import { useEffect, useState } from 'react';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter, useSegments, useRootNavigationState } from 'expo-router';
 import { installAudioUnlock } from '../src/utils/sounds';
 import AppLoadingScreen from '../src/components/AppLoadingScreen';
 import { useAuthStore, getRoleHomePath } from '../src/store/authStore';
@@ -11,6 +11,8 @@ const HYDRATION_TIMEOUT_MS = 3000;
 export default function RootLayout() {
   const router = useRouter();
   const segments = useSegments();
+  const rootNavigationState = useRootNavigationState();
+  const navigatorReady = Boolean(rootNavigationState?.key);
   const hydrated = useAuthStore((s) => s.hydrated);
   const user = useAuthStore((s) => s.user);
   const restoreSession = useAuthStore((s) => s.restoreSession);
@@ -46,14 +48,23 @@ export default function RootLayout() {
   }, [hydrated, ready, sessionChecked, user, restoreSession]);
 
   useEffect(() => {
-    if (!ready || !hydrated || !sessionChecked) return;
+    if (!navigatorReady || !ready || !hydrated || !sessionChecked) return;
 
     const inAuthGroup = segments[0] === 'login';
     const rootSegment = segments[0] as string | undefined;
     const onBootstrap = rootSegment === undefined;
     const currentUser = useAuthStore.getState().user;
 
-    if (!currentUser && !inAuthGroup && !onBootstrap) {
+    if (onBootstrap) {
+      if (!currentUser) {
+        router.replace('/login');
+      } else {
+        router.replace(getRoleHomePath(currentUser.role));
+      }
+      return;
+    }
+
+    if (!currentUser && !inAuthGroup) {
       router.replace('/login');
       return;
     }
@@ -77,7 +88,7 @@ export default function RootLayout() {
         router.replace(getRoleHomePath(currentUser.role));
       }
     }
-  }, [ready, hydrated, sessionChecked, segments, router, user]);
+  }, [navigatorReady, ready, hydrated, sessionChecked, segments, router, user]);
 
   const showSplash = !ready || !hydrated || !sessionChecked;
 
