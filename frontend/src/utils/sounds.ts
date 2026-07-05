@@ -30,6 +30,8 @@ const ORDER_ANNOUNCE = {
 type PaymentSoundKey = keyof typeof SOUNDS;
 export type SoundPhase = 'gesture' | 'success';
 
+const ANNOUNCEMENT_PLAYBACK_RATE = 1.5;
+
 const webAudioTemplates = new Map<string, HTMLAudioElement>();
 let webAudioUnlocked = false;
 let nativeSequenceSound: ExpoAudio.Sound | null = null;
@@ -108,11 +110,13 @@ function unlockWebAudio() {
     preloadOrderAnnouncementSounds();
     preloadPaymentSounds();
 
-    const template = webAudioTemplates.get(clipKey(ORDER_ANNOUNCE.banSo));
+    // Mở khóa Safari — dùng clip thanh toán ngắn, không dùng "Bàn số"
+    const template = webAudioTemplates.get(clipKey(SOUNDS.cash));
     if (!template) return;
 
     const unlockClip = template.cloneNode(true) as HTMLAudioElement;
     unlockClip.volume = 0.01;
+    unlockClip.playbackRate = 1;
     void unlockClip.play().finally(() => {
       unlockClip.pause();
       unlockClip.currentTime = 0;
@@ -136,7 +140,7 @@ export function installAudioUnlock() {
   document.addEventListener('touchstart', onFirstInteraction, { passive: true });
 }
 
-function playWebClip(source: SoundModule): Promise<void> {
+function playWebClip(source: SoundModule, playbackRate = 1): Promise<void> {
   return new Promise((resolve) => {
     try {
       preloadWebClip(source);
@@ -149,6 +153,7 @@ function playWebClip(source: SoundModule): Promise<void> {
 
       const audio = template.cloneNode(true) as HTMLAudioElement;
       audio.currentTime = 0;
+      audio.playbackRate = playbackRate;
 
       const finish = () => {
         audio.removeEventListener('ended', finish);
@@ -167,7 +172,7 @@ function playWebClip(source: SoundModule): Promise<void> {
 
 async function playWebSequence(clips: SoundModule[]) {
   for (const clip of clips) {
-    await playWebClip(clip);
+    await playWebClip(clip, ANNOUNCEMENT_PLAYBACK_RATE);
   }
 }
 
@@ -181,7 +186,7 @@ async function unloadNativeSequenceSound() {
   nativeSequenceSound = null;
 }
 
-async function playNativeClip(source: SoundModule): Promise<void> {
+async function playNativeClip(source: SoundModule, playbackRate = 1): Promise<void> {
   await unloadNativeSequenceSound();
 
   await ExpoAudio.setAudioModeAsync({
@@ -190,14 +195,17 @@ async function playNativeClip(source: SoundModule): Promise<void> {
 
   return new Promise((resolve) => {
     void ExpoAudio.Sound.createAsync(source as number)
-      .then(({ sound }) => {
+      .then(async ({ sound }) => {
         nativeSequenceSound = sound;
         sound.setOnPlaybackStatusUpdate((status: AVPlaybackStatus) => {
           if (status.isLoaded && status.didJustFinish) {
             void unloadNativeSequenceSound().finally(resolve);
           }
         });
-        void sound.playAsync();
+        if (playbackRate !== 1) {
+          await sound.setRateAsync(playbackRate, true);
+        }
+        await sound.playAsync();
       })
       .catch(() => resolve());
   });
@@ -205,7 +213,7 @@ async function playNativeClip(source: SoundModule): Promise<void> {
 
 async function playNativeSequence(clips: SoundModule[]) {
   for (const clip of clips) {
-    await playNativeClip(clip);
+    await playNativeClip(clip, ANNOUNCEMENT_PLAYBACK_RATE);
   }
 }
 
