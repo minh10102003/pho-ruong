@@ -85,6 +85,7 @@ export default function PosMenuScreen() {
     openCart,
     closeCart,
     submitOrder,
+    clearTableSession,
   } = usePosStore();
   const { activeOrders } = useOrderRealtime();
   const [phoModalVisible, setPhoModalVisible] = useState(false);
@@ -317,17 +318,21 @@ export default function PosMenuScreen() {
   const handleSubmitCart = async () => {
     if (cart.length === 0 || selectedTable === null) return;
 
+    const table = selectedTable;
+    const addingToExistingOrder = hasProcessingItems;
     const order = await submitOrder();
     if (!order) return;
 
-    playOrderAnnouncement(selectedTable, 'success');
+    playOrderAnnouncement(table, 'success');
     await useOrderManageStore.getState().fetchAll();
-    Alert.alert(
-      'Thành công',
-      hasProcessingItems
-        ? `Đã gửi món mới cho ${getTableDisplayLabel(selectedTable)}!`
-        : `Đơn ${order.orderNumber} - ${getTableDisplayLabel(selectedTable)} đã được gửi!`
-    );
+
+    const message = addingToExistingOrder
+      ? `Đã gửi món mới cho ${getTableDisplayLabel(table)}!`
+      : `Đơn ${order.orderNumber} - ${getTableDisplayLabel(table)} đã được gửi!`;
+
+    clearTableSession();
+    router.replace('/');
+    Alert.alert('Thành công', message);
   };
 
   const flyTranslateX = flyProgress.interpolate({
