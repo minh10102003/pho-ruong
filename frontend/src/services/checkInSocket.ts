@@ -9,6 +9,15 @@ const listeners = new Set<(payload: CheckInSocketPayload) => void>();
 let joinedRole: Role | null = null;
 let joinedEmployeeId: string | null = null;
 
+function applyJoin(client: Socket) {
+  if (joinedRole === 'MANAGER' || joinedRole === 'ADMIN') {
+    client.emit('join', 'managers');
+  }
+  if (joinedRole === 'STAFF' && joinedEmployeeId) {
+    client.emit('join', `staff:${joinedEmployeeId}`);
+  }
+}
+
 function getSocket(): Socket {
   if (!socket) {
     socket = io(API_ORIGIN, {
@@ -22,27 +31,33 @@ function getSocket(): Socket {
     });
 
     socket.on('connect', () => {
-      if (joinedRole === 'MANAGER' || joinedRole === 'ADMIN') {
-        socket?.emit('join', 'managers');
-      }
-      if (joinedRole === 'STAFF' && joinedEmployeeId) {
-        socket?.emit('join', `staff:${joinedEmployeeId}`);
-      }
+      applyJoin(socket!);
     });
   }
   return socket;
 }
 
-function joinRooms(role: Role, employeeId?: string) {
-  joinedRole = role;
-  joinedEmployeeId = employeeId ?? null;
-  const client = getSocket();
-  if (!client.connected) return;
-  if (role === 'MANAGER' || role === 'ADMIN') {
-    client.emit('join', 'managers');
+function ensureJoined(role: Role, employeeId?: string) {
+  const nextEmployeeId = employeeId ?? null;
+  if (
+    joinedRole === role &&
+    joinedEmployeeId === nextEmployeeId &&
+    socket?.connected
+  ) {
+    return;
   }
-  if (role === 'STAFF' && employeeId) {
-    client.emit('join', `staff:${employeeId}`);
+
+  joinedRole = role;
+  joinedEmployeeId = nextEmployeeId;
+
+  if (socket) {
+    socket.disconnect();
+    socket = null;
+  }
+
+  const client = getSocket();
+  if (client.connected) {
+    applyJoin(client);
   }
 }
 
@@ -51,8 +66,7 @@ export function connectCheckInSocket(options: {
   employeeId?: string;
   onUpdate: (payload: CheckInSocketPayload) => void;
 }) {
-  getSocket();
-  joinRooms(options.role, options.employeeId);
+  ensureJoined(options.role, options.employeeId);
   listeners.add(options.onUpdate);
 
   return () => {

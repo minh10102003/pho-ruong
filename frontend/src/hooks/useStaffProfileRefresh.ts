@@ -17,7 +17,7 @@ export function useStaffProfileRefresh(
       if (!employeeId) return;
       void syncCurrentTimesheet(employeeId);
       void fetchMyPendingCheckInRequest();
-      void fetchPayroll(payrollYear, payrollMonth, employeeId);
+      void fetchPayroll(payrollYear, payrollMonth, employeeId, true);
     }, [
       employeeId,
       payrollYear,

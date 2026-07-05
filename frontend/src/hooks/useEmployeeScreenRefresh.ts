@@ -8,7 +8,7 @@ export function useEmployeeScreenRefresh(payrollYear?: number, payrollMonth?: nu
 
   useFocusEffect(
     useCallback(() => {
-      void refreshEmployeeData(undefined, payrollYear, payrollMonth);
+      void refreshEmployeeData(undefined, payrollYear, payrollMonth, true);
       void fetchPending();
     }, [payrollYear, payrollMonth, fetchPending])
   );

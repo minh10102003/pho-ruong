@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { Employee, PayrollEntry, Timesheet, CheckInRequest } from '../types';
+import { AppRole } from '../types/auth';
 import { api } from '../services/api';
 
 function mapOpenTimesheets(timesheets: Timesheet[]): Record<string, Timesheet> {
@@ -20,7 +21,7 @@ interface EmployeeState {
   loading: boolean;
   error: string | null;
 
-  fetchEmployees: () => Promise<void>;
+  fetchEmployees: (silent?: boolean) => Promise<void>;
   fetchOpenTimesheets: () => Promise<void>;
   syncCurrentTimesheet: (employeeId: string) => Promise<void>;
   createEmployee: (data: {
@@ -63,8 +64,8 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
   loading: false,
   error: null,
 
-  fetchEmployees: async () => {
-    set({ loading: true });
+  fetchEmployees: async (silent = false) => {
+    if (!silent) set({ loading: true });
     try {
       const employees = await api.getEmployees();
       set({ employees, loading: false });
@@ -269,7 +270,10 @@ export function refreshEmployeeData(
     syncCurrentTimesheet,
     fetchPayroll,
   } = useEmployeeStore.getState();
-  const tasks: Promise<void>[] = [fetchEmployees(), fetchOpenTimesheets()];
+  const tasks: Promise<void>[] = [
+    fetchEmployees(silent),
+    fetchOpenTimesheets(),
+  ];
   if (selectedEmployeeId) {
     tasks.push(syncCurrentTimesheet(selectedEmployeeId));
   }
@@ -277,4 +281,36 @@ export function refreshEmployeeData(
     tasks.push(fetchPayroll(payrollYear, payrollMonth, undefined, silent));
   }
   return Promise.all(tasks);
+}
+
+/** Cập nhật dữ liệu check-in qua socket — không bật loading toàn màn hình */
+export async function refreshCheckInRealtimeData(params: {
+  role: AppRole;
+  employeeId?: string;
+  eventEmployeeId?: string;
+}) {
+  const {
+    fetchPendingCheckInRequests,
+    fetchMyPendingCheckInRequest,
+    fetchOpenTimesheets,
+    syncCurrentTimesheet,
+    fetchEmployees,
+  } = useEmployeeStore.getState();
+
+  if (params.role === 'MANAGER' || params.role === 'ADMIN') {
+    await Promise.all([
+      fetchPendingCheckInRequests(),
+      fetchOpenTimesheets(),
+      fetchEmployees(true),
+    ]);
+    return;
+  }
+
+  if (params.role === 'STAFF' && params.employeeId) {
+    if (params.eventEmployeeId && params.eventEmployeeId !== params.employeeId) {
+      return;
+    }
+    await fetchMyPendingCheckInRequest();
+    await syncCurrentTimesheet(params.employeeId);
+  }
 }
