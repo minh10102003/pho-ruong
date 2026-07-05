@@ -2,56 +2,60 @@ import { io, Socket } from 'socket.io-client';
 import { API_ORIGIN } from '../constants';
 import { CheckInSocketPayload } from '../types';
 
-let socket: Socket | null = null;
+type Role = 'STAFF' | 'MANAGER' | 'ADMIN';
 
-export function getCheckInSocket(): Socket {
+let socket: Socket | null = null;
+const listeners = new Set<(payload: CheckInSocketPayload) => void>();
+let joinedRole: Role | null = null;
+let joinedEmployeeId: string | null = null;
+
+function getSocket(): Socket {
   if (!socket) {
     socket = io(API_ORIGIN, {
       path: '/socket.io',
       transports: ['websocket', 'polling'],
-      autoConnect: false,
+      autoConnect: true,
+    });
+
+    socket.on('checkin:update', (payload: CheckInSocketPayload) => {
+      listeners.forEach((listener) => listener(payload));
+    });
+
+    socket.on('connect', () => {
+      if (joinedRole === 'MANAGER' || joinedRole === 'ADMIN') {
+        socket?.emit('join', 'managers');
+      }
+      if (joinedRole === 'STAFF' && joinedEmployeeId) {
+        socket?.emit('join', `staff:${joinedEmployeeId}`);
+      }
     });
   }
   return socket;
 }
 
+function joinRooms(role: Role, employeeId?: string) {
+  joinedRole = role;
+  joinedEmployeeId = employeeId ?? null;
+  const client = getSocket();
+  if (!client.connected) return;
+  if (role === 'MANAGER' || role === 'ADMIN') {
+    client.emit('join', 'managers');
+  }
+  if (role === 'STAFF' && employeeId) {
+    client.emit('join', `staff:${employeeId}`);
+  }
+}
+
 export function connectCheckInSocket(options: {
-  role: 'STAFF' | 'MANAGER' | 'ADMIN';
+  role: Role;
   employeeId?: string;
   onUpdate: (payload: CheckInSocketPayload) => void;
 }) {
-  const client = getCheckInSocket();
-
-  const handleUpdate = (payload: CheckInSocketPayload) => {
-    options.onUpdate(payload);
-  };
-
-  client.off('checkin:update', handleUpdate);
-  client.on('checkin:update', handleUpdate);
-
-  if (!client.connected) {
-    client.connect();
-  }
-
-  client.once('connect', () => {
-    if (options.role === 'MANAGER' || options.role === 'ADMIN') {
-      client.emit('join', 'managers');
-    }
-    if (options.role === 'STAFF' && options.employeeId) {
-      client.emit('join', `staff:${options.employeeId}`);
-    }
-  });
-
-  if (client.connected) {
-    if (options.role === 'MANAGER' || options.role === 'ADMIN') {
-      client.emit('join', 'managers');
-    }
-    if (options.role === 'STAFF' && options.employeeId) {
-      client.emit('join', `staff:${options.employeeId}`);
-    }
-  }
+  getSocket();
+  joinRooms(options.role, options.employeeId);
+  listeners.add(options.onUpdate);
 
   return () => {
-    client.off('checkin:update', handleUpdate);
+    listeners.delete(options.onUpdate);
   };
 }

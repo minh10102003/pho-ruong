@@ -6,7 +6,6 @@ import { socketHub, CheckInSocketPayload } from '../websocket/socketHub';
 function notifyCheckIn(payload: CheckInSocketPayload) {
   socketHub.emitCheckInUpdate(payload);
   orderWsHub.broadcastCheckInUpdate(payload);
-  orderWsHub.broadcastEmployeeUpdate({ action: `checkin-${payload.action}`, employeeId: payload.employeeId });
 }
 
 export class CheckInService {

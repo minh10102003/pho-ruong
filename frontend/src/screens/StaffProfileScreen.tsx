@@ -31,26 +31,22 @@ export default function StaffProfileScreen() {
     cancelMyCheckInRequest,
     checkOut,
     fetchPayroll,
-    syncCurrentTimesheet,
-    fetchMyPendingCheckInRequest,
   } = useEmployeeStore();
 
   const employeeId = user?.employeeId ?? '';
-  const [payrollYear, setPayrollYear] = useState(getCurrentPeriod().year);
-  const [payrollMonth, setPayrollMonth] = useState(getCurrentPeriod().month);
+  const [payrollYear] = useState(getCurrentPeriod().year);
+  const [payrollMonth] = useState(getCurrentPeriod().month);
 
   const openTimesheet = employeeId ? openTimesheets[employeeId] : null;
   const payrollEntry = Array.isArray(payroll) ? payroll[0] : payroll;
   const pendingRequest = myPendingCheckInRequest?.status === 'PENDING' ? myPendingCheckInRequest : null;
 
-  useCheckInRealtime(undefined, payrollYear, payrollMonth);
+  const refreshAll = useCheckInRealtime(payrollYear, payrollMonth);
 
   useEffect(() => {
     if (!employeeId) return;
-    syncCurrentTimesheet(employeeId);
-    fetchMyPendingCheckInRequest();
-    fetchPayroll(payrollYear, payrollMonth, employeeId);
-  }, [employeeId, payrollYear, payrollMonth, syncCurrentTimesheet, fetchMyPendingCheckInRequest, fetchPayroll]);
+    void fetchPayroll(payrollYear, payrollMonth, employeeId);
+  }, [employeeId, payrollYear, payrollMonth, fetchPayroll]);
 
   const handleRequestCheckIn = async () => {
     if (!employeeId) return;
@@ -65,6 +61,7 @@ export default function StaffProfileScreen() {
   const handleCancelRequest = async () => {
     try {
       await cancelMyCheckInRequest();
+      await refreshAll();
       Alert.alert('Đã hủy', 'Đã hủy yêu cầu check-in.');
     } catch (e) {
       Alert.alert('Lỗi', (e as Error).message);

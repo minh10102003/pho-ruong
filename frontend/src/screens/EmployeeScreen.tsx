@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
   Alert,
   ScrollView,
   Modal,
@@ -12,12 +11,12 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useEmployeeStore } from '../store/employeeStore';
-import { useEmployeeRealtime } from '../hooks/useEmployeeRealtime';
 import { useCheckInRealtime } from '../hooks/useCheckInRealtime';
 import { BigButton } from '../components/BigButton';
 import { COLORS } from '../constants';
 import { formatCurrency } from '../utils/format';
 import { formStyles, FORM_SPACING } from '../styles/formStyles';
+import { confirmAsync } from '../utils/confirm';
 import { Employee } from '../types';
 
 type FormMode = 'add' | 'edit';
@@ -175,25 +174,21 @@ function EmployeeFormModal({
 export default function EmployeeScreen() {
   const {
     employees,
-    openTimesheets,
     pendingCheckInRequests,
     payroll,
     loading,
     createEmployee,
     createStaffAccount,
     updateEmployee,
-    checkIn,
-    checkOut,
     fetchPayroll,
-    syncCurrentTimesheet,
     approveCheckInRequest,
     rejectCheckInRequest,
   } = useEmployeeStore();
 
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
   const [formVisible, setFormVisible] = useState(false);
   const [formMode, setFormMode] = useState<FormMode>('add');
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+  const [actingRequestId, setActingRequestId] = useState<string | null>(null);
 
   const currentPeriod = getCurrentPeriod();
   const [payrollYear, setPayrollYear] = useState(currentPeriod.year);
@@ -204,26 +199,12 @@ export default function EmployeeScreen() {
 
   const payrollWithHours = payroll.filter((entry) => entry.totalHours > 0);
   const totalPayroll = payrollWithHours.reduce((sum, entry) => sum + entry.totalSalary, 0);
-  const selectedOpenTimesheet = selectedEmployeeId ? openTimesheets[selectedEmployeeId] : null;
-  const canCheckIn = Boolean(selectedEmployeeId) && !selectedOpenTimesheet;
-  const canCheckOut = Boolean(selectedOpenTimesheet);
 
-  useEmployeeRealtime(selectedEmployeeId || undefined, payrollYear, payrollMonth);
-  useCheckInRealtime(selectedEmployeeId || undefined, payrollYear, payrollMonth);
+  useCheckInRealtime(payrollYear, payrollMonth);
 
   useEffect(() => {
     fetchPayroll(payrollYear, payrollMonth);
   }, [fetchPayroll, payrollYear, payrollMonth]);
-
-  const handleSelectEmployee = (employeeId: string) => {
-    if (selectedEmployeeId === employeeId) {
-      setSelectedEmployeeId('');
-      syncCurrentTimesheet('');
-      return;
-    }
-    setSelectedEmployeeId(employeeId);
-    syncCurrentTimesheet(employeeId);
-  };
 
   const goToPreviousMonth = () => {
     const next = shiftPayrollMonth(payrollYear, payrollMonth, -1);
@@ -286,89 +267,76 @@ export default function EmployeeScreen() {
     }
   };
 
-  const handleCheckIn = async () => {
-    if (!selectedEmployeeId) {
-      Alert.alert('Lỗi', 'Vui lòng chọn nhân viên');
-      return;
-    }
-    try {
-      await checkIn(selectedEmployeeId);
-      Alert.alert('Thành công', 'Check-in thành công!');
-    } catch (e) {
-      Alert.alert('Lỗi', (e as Error).message);
-    }
-  };
-
-  const handleCheckOut = async () => {
-    if (!selectedOpenTimesheet) return;
-    try {
-      await checkOut(selectedOpenTimesheet.id);
-      await fetchPayroll(payrollYear, payrollMonth);
-      Alert.alert('Thành công', 'Check-out thành công!');
-    } catch (e) {
-      Alert.alert('Lỗi', (e as Error).message);
-    }
-  };
-
   const handleApproveCheckIn = async (requestId: string, employeeName: string) => {
+    setActingRequestId(requestId);
     try {
       await approveCheckInRequest(requestId);
       Alert.alert('Đã duyệt', `${employeeName} đã bắt đầu ca làm.`);
     } catch (e) {
       Alert.alert('Lỗi', (e as Error).message);
+    } finally {
+      setActingRequestId(null);
     }
   };
 
-  const handleRejectCheckIn = (requestId: string, employeeName: string) => {
-    Alert.alert('Từ chối check-in', `Xác nhận từ chối yêu cầu của ${employeeName}?`, [
-      { text: 'Huỷ', style: 'cancel' },
-      {
-        text: 'Từ chối',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await rejectCheckInRequest(requestId);
-            Alert.alert('Đã từ chối', 'Nhân viên sẽ nhận thông báo.');
-          } catch (e) {
-            Alert.alert('Lỗi', (e as Error).message);
-          }
-        },
-      },
-    ]);
+  const handleRejectCheckIn = async (requestId: string, employeeName: string) => {
+    const confirmed = await confirmAsync(
+      'Từ chối check-in',
+      `Xác nhận từ chối yêu cầu của ${employeeName}?`
+    );
+    if (!confirmed) return;
+
+    setActingRequestId(requestId);
+    try {
+      await rejectCheckInRequest(requestId);
+      Alert.alert('Đã từ chối', 'Nhân viên sẽ nhận thông báo.');
+    } catch (e) {
+      Alert.alert('Lỗi', (e as Error).message);
+    } finally {
+      setActingRequestId(null);
+    }
   };
 
   return (
     <ScrollView style={styles.container}>
-      {pendingCheckInRequests.length > 0 && (
-        <View style={styles.section}>
-          <Text style={formStyles.sectionTitle}>
-            Duyệt check-in ({pendingCheckInRequests.length})
-          </Text>
-          {pendingCheckInRequests.map((request) => (
-            <View key={request.id} style={styles.approvalCard}>
-              <Text style={styles.empName}>{request.employee.fullName}</Text>
-              <Text style={styles.approvalMeta}>
-                Gửi lúc: {new Date(request.requestedAt).toLocaleString('vi-VN')}
-              </Text>
-              <View style={styles.approvalActions}>
-                <BigButton
-                  title="Duyệt"
-                  onPress={() => handleApproveCheckIn(request.id, request.employee.fullName)}
-                  loading={loading}
-                  style={styles.approvalBtn}
-                />
-                <BigButton
-                  title="Từ chối"
-                  onPress={() => handleRejectCheckIn(request.id, request.employee.fullName)}
-                  variant="outline"
-                  loading={loading}
-                  style={styles.approvalBtn}
-                />
+      <View style={styles.section}>
+        <Text style={formStyles.sectionTitle}>
+          Duyệt check-in
+          {pendingCheckInRequests.length > 0 ? ` (${pendingCheckInRequests.length})` : ''}
+        </Text>
+        {pendingCheckInRequests.length === 0 ? (
+          <Text style={styles.emptyInline}>Không có yêu cầu chờ duyệt.</Text>
+        ) : (
+          pendingCheckInRequests.map((request) => {
+            const isActing = actingRequestId === request.id;
+            return (
+              <View key={request.id} style={styles.approvalCard}>
+                <Text style={styles.empName}>{request.employee.fullName}</Text>
+                <Text style={styles.approvalMeta}>
+                  Gửi lúc: {new Date(request.requestedAt).toLocaleString('vi-VN')}
+                </Text>
+                <View style={styles.approvalActions}>
+                  <BigButton
+                    title="Duyệt"
+                    onPress={() => handleApproveCheckIn(request.id, request.employee.fullName)}
+                    loading={isActing}
+                    disabled={actingRequestId !== null && !isActing}
+                    style={styles.approvalBtn}
+                  />
+                  <BigButton
+                    title="Từ chối"
+                    onPress={() => void handleRejectCheckIn(request.id, request.employee.fullName)}
+                    variant="outline"
+                    loading={isActing}
+                    disabled={actingRequestId !== null && !isActing}
+                    style={styles.approvalBtn}
+                  />
+                </View>
               </View>
-            </View>
-          ))}
-        </View>
-      )}
+            );
+          })
+        )}
+      </View>
 
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
@@ -394,58 +362,6 @@ export default function EmployeeScreen() {
               <Text style={styles.editHint}>Sửa</Text>
             </TouchableOpacity>
           ))
-        )}
-      </View>
-
-      <View style={styles.section}>
-        <Text style={formStyles.sectionTitle}>Chấm công</Text>
-
-        {employees.length === 0 ? (
-          <Text style={styles.empty}>Thêm nhân viên trước khi chấm công.</Text>
-        ) : (
-          <>
-            <FlatList
-              data={employees}
-              keyExtractor={(item) => item.id}
-              scrollEnabled={false}
-              renderItem={({ item }) => {
-                const isCheckedIn = Boolean(openTimesheets[item.id]);
-                return (
-                  <BigButton
-                    title={isCheckedIn ? `${item.fullName} · Đang làm` : item.fullName}
-                    onPress={() => handleSelectEmployee(item.id)}
-                    variant={selectedEmployeeId === item.id ? 'primary' : 'outline'}
-                    style={styles.empBtn}
-                  />
-                );
-              }}
-            />
-
-            <View style={styles.checkRow}>
-              <BigButton
-                title="Check-in"
-                onPress={handleCheckIn}
-                loading={loading}
-                disabled={!canCheckIn}
-                style={{ flex: 1, marginRight: 8 }}
-              />
-              <BigButton
-                title="Check-out"
-                onPress={handleCheckOut}
-                variant="secondary"
-                disabled={!canCheckOut}
-                loading={loading}
-                style={{ flex: 1 }}
-              />
-            </View>
-
-            {selectedOpenTimesheet && (
-              <Text style={styles.checkInfo}>
-                Đang làm việc từ:{' '}
-                {new Date(selectedOpenTimesheet.checkIn).toLocaleTimeString('vi-VN')}
-              </Text>
-            )}
-          </>
         )}
       </View>
 
@@ -550,8 +466,7 @@ const styles = StyleSheet.create({
   empMeta: { fontSize: 13, color: COLORS.textSecondary, marginTop: 2 },
   empPhone: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
   editHint: { fontSize: 13, fontWeight: '600', color: COLORS.primary },
-  empBtn: { marginBottom: 8 },
-  checkRow: { flexDirection: 'row', marginTop: 12 },
+  emptyInline: { color: COLORS.textSecondary, fontSize: 14 },
   approvalCard: {
     padding: 12,
     borderRadius: 10,
@@ -562,12 +477,6 @@ const styles = StyleSheet.create({
   approvalMeta: { fontSize: 13, color: COLORS.textSecondary },
   approvalActions: { flexDirection: 'row', gap: 8 },
   approvalBtn: { flex: 1 },
-  checkInfo: {
-    marginTop: 12,
-    textAlign: 'center',
-    color: COLORS.success,
-    fontWeight: '600',
-  },
   periodNav: {
     flexDirection: 'row',
     alignItems: 'center',

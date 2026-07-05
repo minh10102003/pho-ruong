@@ -50,7 +50,7 @@ interface EmployeeState {
   approveCheckInRequest: (requestId: string) => Promise<void>;
   rejectCheckInRequest: (requestId: string, rejectReason?: string) => Promise<void>;
   checkOut: (timesheetId: string) => Promise<void>;
-  fetchPayroll: (year: number, month: number, employeeId?: string) => Promise<void>;
+  fetchPayroll: (year: number, month: number, employeeId?: string, silent?: boolean) => Promise<void>;
 }
 
 export const useEmployeeStore = create<EmployeeState>((set, get) => ({
@@ -200,7 +200,7 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
   approveCheckInRequest: async (requestId) => {
     set({ loading: true, error: null });
     try {
-      const approved = await api.approveCheckInRequest(requestId);
+      await api.approveCheckInRequest(requestId);
       set((state) => {
         const pendingCheckInRequests = state.pendingCheckInRequests.filter((r) => r.id !== requestId);
         return { pendingCheckInRequests, loading: false };
@@ -245,8 +245,8 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
     }
   },
 
-  fetchPayroll: async (year, month, employeeId) => {
-    set({ loading: true });
+  fetchPayroll: async (year, month, employeeId, silent = false) => {
+    if (!silent) set({ loading: true });
     try {
       const data = await api.getPayroll(year, month, employeeId);
       const payroll = Array.isArray(data) ? data : [data];
@@ -260,7 +260,8 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
 export function refreshEmployeeData(
   selectedEmployeeId?: string,
   payrollYear?: number,
-  payrollMonth?: number
+  payrollMonth?: number,
+  silent = false
 ) {
   const {
     fetchEmployees,
@@ -273,7 +274,7 @@ export function refreshEmployeeData(
     tasks.push(syncCurrentTimesheet(selectedEmployeeId));
   }
   if (payrollYear && payrollMonth) {
-    tasks.push(fetchPayroll(payrollYear, payrollMonth));
+    tasks.push(fetchPayroll(payrollYear, payrollMonth, undefined, silent));
   }
   return Promise.all(tasks);
 }

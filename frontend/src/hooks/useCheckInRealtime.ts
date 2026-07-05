@@ -1,7 +1,6 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { Alert } from 'react-native';
-import { WS_URL } from '../constants';
 import { connectCheckInSocket } from '../services/checkInSocket';
 import { CheckInSocketPayload } from '../types';
 import { refreshEmployeeData, useEmployeeStore } from '../store/employeeStore';
@@ -20,77 +19,68 @@ function showCheckInAlert(payload: CheckInSocketPayload) {
   Alert.alert(title, payload.message);
 }
 
-/** Socket.IO + WebSocket fallback cho duyệt check-in realtime */
-export function useCheckInRealtime(
-  selectedEmployeeId?: string,
-  payrollYear?: number,
-  payrollMonth?: number
-) {
+/** Socket.IO realtime cho duyệt check-in */
+export function useCheckInRealtime(payrollYear?: number, payrollMonth?: number) {
   const user = useAuthStore((s) => s.user);
   const refreshPending = useEmployeeStore((s) => s.fetchPendingCheckInRequests);
   const refreshMine = useEmployeeStore((s) => s.fetchMyPendingCheckInRequest);
+  const userRef = useRef(user);
+  userRef.current = user;
 
   const refreshAll = useCallback(async () => {
-    if (user?.role === 'MANAGER' || user?.role === 'ADMIN') {
-      await refreshEmployeeData(selectedEmployeeId, payrollYear, payrollMonth);
+    const currentUser = userRef.current;
+    if (!currentUser) return;
+
+    if (currentUser.role === 'MANAGER' || currentUser.role === 'ADMIN') {
+      await refreshEmployeeData(undefined, payrollYear, payrollMonth, true);
       await refreshPending();
       return;
     }
-    if (user?.role === 'STAFF' && user.employeeId) {
+
+    if (currentUser.role === 'STAFF' && currentUser.employeeId) {
       await refreshMine();
-      await useEmployeeStore.getState().syncCurrentTimesheet(user.employeeId);
+      await useEmployeeStore.getState().syncCurrentTimesheet(currentUser.employeeId);
       if (payrollYear && payrollMonth) {
-        await useEmployeeStore.getState().fetchPayroll(payrollYear, payrollMonth, user.employeeId);
+        await useEmployeeStore.getState().fetchPayroll(payrollYear, payrollMonth, currentUser.employeeId, true);
       }
     }
-  }, [selectedEmployeeId, payrollYear, payrollMonth, refreshPending, refreshMine, user]);
+  }, [payrollYear, payrollMonth, refreshPending, refreshMine]);
 
-  const handlePayload = useCallback(
-    (payload: CheckInSocketPayload) => {
-      void refreshAll();
-      if (user?.role === 'STAFF' && payload.employeeId === user.employeeId) {
-        if (payload.action === 'approved' || payload.action === 'rejected') {
-          showCheckInAlert(payload);
-        }
-      }
-      if ((user?.role === 'MANAGER' || user?.role === 'ADMIN') && payload.action === 'requested') {
-        showCheckInAlert(payload);
-      }
-    },
-    [refreshAll, user]
-  );
+  const refreshAllRef = useRef(refreshAll);
+  refreshAllRef.current = refreshAll;
 
   useFocusEffect(
     useCallback(() => {
-      void refreshAll();
-    }, [refreshAll])
+      void refreshAllRef.current();
+    }, [])
   );
 
   useEffect(() => {
     if (!user) return;
 
-    const disconnectSocket = connectCheckInSocket({
+    const onUpdate = (payload: CheckInSocketPayload) => {
+      void refreshAllRef.current();
+
+      const currentUser = userRef.current;
+      if (currentUser?.role === 'STAFF' && payload.employeeId === currentUser.employeeId) {
+        if (payload.action === 'approved' || payload.action === 'rejected') {
+          showCheckInAlert(payload);
+        }
+      }
+      if (
+        (currentUser?.role === 'MANAGER' || currentUser?.role === 'ADMIN') &&
+        payload.action === 'requested'
+      ) {
+        showCheckInAlert(payload);
+      }
+    };
+
+    return connectCheckInSocket({
       role: user.role,
       employeeId: user.employeeId ?? undefined,
-      onUpdate: handlePayload,
+      onUpdate,
     });
+  }, [user?.role, user?.employeeId, user?.id]);
 
-    let ws: WebSocket | null = null;
-    try {
-      ws = new WebSocket(WS_URL);
-      ws.onmessage = (event) => {
-        const msg = JSON.parse(event.data);
-        if (msg.type === 'CHECKIN_UPDATE' || msg.type === 'EMPLOYEE_UPDATE') {
-          void refreshAll();
-        }
-      };
-    } catch {
-      // ignore
-    }
-
-    return () => {
-      disconnectSocket();
-      ws?.close();
-    };
-  }, [user, handlePayload, refreshAll]);
+  return refreshAll;
 }
