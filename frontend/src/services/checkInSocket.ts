@@ -1,4 +1,5 @@
 import { io, Socket } from 'socket.io-client';
+import { Platform } from 'react-native';
 import { API_ORIGIN } from '../constants';
 import { CheckInSocketPayload } from '../types';
 
@@ -22,8 +23,14 @@ function getSocket(): Socket {
   if (!socket) {
     socket = io(API_ORIGIN, {
       path: '/socket.io',
-      transports: ['websocket', 'polling'],
-      autoConnect: true,
+      // Polling trước — ổn định hơn qua proxy Render/CDN; nâng cấp lên WS khi được.
+      transports: Platform.OS === 'web' ? ['polling', 'websocket'] : ['websocket', 'polling'],
+      upgrade: true,
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 10000,
+      timeout: 20000,
     });
 
     socket.on('checkin:update', (payload: CheckInSocketPayload) => {
@@ -39,11 +46,12 @@ function getSocket(): Socket {
 
 function ensureJoined(role: Role, employeeId?: string) {
   const nextEmployeeId = employeeId ?? null;
-  if (
-    joinedRole === role &&
-    joinedEmployeeId === nextEmployeeId &&
-    socket?.connected
-  ) {
+
+  if (joinedRole === role && joinedEmployeeId === nextEmployeeId) {
+    const client = socket ?? getSocket();
+    if (!client.connected) {
+      client.connect();
+    }
     return;
   }
 

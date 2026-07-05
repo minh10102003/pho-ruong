@@ -1,5 +1,5 @@
-import { Audio as ExpoAudio, AVPlaybackStatus } from 'expo-av';
 import { Platform } from 'react-native';
+import type { Audio } from 'expo-av';
 import { COUNTER_TABLE_NUMBER } from '../constants/tables';
 
 type SoundModule = number | string;
@@ -36,7 +36,7 @@ const ANNOUNCEMENT_PLAYBACK_RATE = 1.5;
 
 const webAudioTemplates = new Map<string, HTMLAudioElement>();
 let webAudioUnlocked = false;
-let nativeSequenceSound: ExpoAudio.Sound | null = null;
+let nativeSequenceSound: Audio.Sound | null = null;
 let orderAnnouncementQueue: Promise<void> = Promise.resolve();
 
 function clipKey(source: SoundModule): string {
@@ -190,7 +190,11 @@ async function unloadNativeSequenceSound() {
 }
 
 async function playNativeClip(source: SoundModule, playbackRate = 1): Promise<void> {
+  if (Platform.OS === 'web') return;
+
   await unloadNativeSequenceSound();
+
+  const { Audio: ExpoAudio } = await import('expo-av');
 
   await ExpoAudio.setAudioModeAsync({
     playsInSilentModeIOS: true,
@@ -200,7 +204,7 @@ async function playNativeClip(source: SoundModule, playbackRate = 1): Promise<vo
     void ExpoAudio.Sound.createAsync(source as number)
       .then(async ({ sound }) => {
         nativeSequenceSound = sound;
-        sound.setOnPlaybackStatusUpdate((status: AVPlaybackStatus) => {
+        sound.setOnPlaybackStatusUpdate((status) => {
           if (status.isLoaded && status.didJustFinish) {
             void unloadNativeSequenceSound().finally(resolve);
           }

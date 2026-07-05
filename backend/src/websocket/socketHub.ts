@@ -19,6 +19,9 @@ class SocketHub {
     this.io = new Server(server, {
       cors: { origin: '*' },
       path: '/socket.io',
+      transports: ['polling', 'websocket'],
+      pingTimeout: 60_000,
+      pingInterval: 25_000,
     });
 
     this.io.on('connection', (socket) => {

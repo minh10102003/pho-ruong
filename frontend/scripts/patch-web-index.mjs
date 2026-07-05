@@ -23,6 +23,7 @@ let html = readFileSync(indexPath, 'utf8');
 
 const tags = [
   '<meta name="theme-color" content="#468432" />',
+  '<meta name="mobile-web-app-capable" content="yes" />',
   '<meta name="apple-mobile-web-app-capable" content="yes" />',
   '<meta name="apple-mobile-web-app-status-bar-style" content="default" />',
   '<meta name="apple-mobile-web-app-title" content="PHỞ RUỘNG" />',
