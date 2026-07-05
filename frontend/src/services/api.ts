@@ -2,6 +2,12 @@ import { API_BASE_URL } from '../constants';
 import { decodeOrderItemMeta } from '../utils/orderItemMeta';
 import { AuthUser } from '../types/auth';
 
+let unauthorizedHandler: (() => void) | null = null;
+
+export function setUnauthorizedHandler(handler: (() => void) | null) {
+  unauthorizedHandler = handler;
+}
+
 // Client HTTP gọi API Backend
 class ApiClient {
   private baseUrl: string;
@@ -34,6 +40,9 @@ class ApiClient {
     });
 
     const json = await response.json();
+    if (response.status === 401) {
+      unauthorizedHandler?.();
+    }
     if (!response.ok || !json.success) {
       throw new Error(json.error || 'Lỗi kết nối API');
     }

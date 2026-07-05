@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import jwt from 'jsonwebtoken';
 import { AppRole } from '@prisma/client';
 import { verifyAuthToken } from '../utils/jwt';
 
@@ -19,7 +20,14 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
       displayName: payload.displayName,
     };
     next();
-  } catch {
+  } catch (error) {
+    if (error instanceof jwt.TokenExpiredError) {
+      res.status(401).json({
+        success: false,
+        error: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
+      });
+      return;
+    }
     res.status(401).json({ success: false, error: 'Phiên đăng nhập không hợp lệ' });
   }
 }

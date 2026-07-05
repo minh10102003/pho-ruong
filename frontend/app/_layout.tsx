@@ -4,6 +4,7 @@ import { Stack, useRouter, useSegments, useRootNavigationState } from 'expo-rout
 import { installAudioUnlock } from '../src/utils/sounds';
 import AppLoadingScreen from '../src/components/AppLoadingScreen';
 import { useAuthStore, getRoleHomePath } from '../src/store/authStore';
+import { setUnauthorizedHandler } from '../src/services/api';
 
 const SPLASH_MIN_MS = 1200;
 const HYDRATION_TIMEOUT_MS = 3000;
@@ -16,6 +17,7 @@ export default function RootLayout() {
   const hydrated = useAuthStore((s) => s.hydrated);
   const user = useAuthStore((s) => s.user);
   const restoreSession = useAuthStore((s) => s.restoreSession);
+  const ensureSessionValid = useAuthStore((s) => s.ensureSessionValid);
   const setHydrated = useAuthStore((s) => s.setHydrated);
   const [ready, setReady] = useState(false);
   const [sessionChecked, setSessionChecked] = useState(false);
@@ -36,16 +38,37 @@ export default function RootLayout() {
   }, [setHydrated]);
 
   useEffect(() => {
+    setUnauthorizedHandler(() => {
+      void useAuthStore.getState().logout();
+      router.replace('/login');
+    });
+    return () => setUnauthorizedHandler(null);
+  }, [router]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (!useAuthStore.getState().ensureSessionValid()) {
+        router.replace('/login');
+      }
+    }, 60_000);
+    return () => clearInterval(timer);
+  }, [router]);
+
+  useEffect(() => {
     if (!hydrated || !ready || sessionChecked) return;
 
     const check = async () => {
+      if (!ensureSessionValid()) {
+        setSessionChecked(true);
+        return;
+      }
       if (!user) {
         await restoreSession();
       }
       setSessionChecked(true);
     };
     void check();
-  }, [hydrated, ready, sessionChecked, user, restoreSession]);
+  }, [hydrated, ready, sessionChecked, user, restoreSession, ensureSessionValid]);
 
   useEffect(() => {
     if (!navigatorReady || !ready || !hydrated || !sessionChecked) return;

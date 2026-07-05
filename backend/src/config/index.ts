@@ -7,5 +7,5 @@ export const config = {
   taxRate: parseFloat(process.env.TAX_RATE || '8'),
   wsPath: process.env.WS_PATH || '/ws',
   jwtSecret: process.env.JWT_SECRET || 'pho-ruong-dev-secret-change-in-production',
-  jwtExpiresIn: process.env.JWT_EXPIRES_IN || '12h',
+  jwtExpiresIn: process.env.JWT_EXPIRES_IN || '24h',
 };
