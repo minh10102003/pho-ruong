@@ -61,6 +61,13 @@ class ApiClient {
     return this.request<AuthUser>('/auth/me');
   }
 
+  changePassword(body: { currentPassword: string; newPassword: string }) {
+    return this.request<{ message: string }>('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  }
+
   createManagerAccount(body: { fullName: string; phone: string; password: string }) {
     return this.request<AuthUser>('/auth/managers', {
       method: 'POST',

@@ -26,6 +26,13 @@ export class UserRepository {
       data: { lastLoginAt: new Date() },
     });
   }
+
+  updatePassword(id: string, passwordHash: string) {
+    return prisma.user.update({
+      where: { id },
+      data: { passwordHash },
+    });
+  }
 }
 
 export const userRepository = new UserRepository();

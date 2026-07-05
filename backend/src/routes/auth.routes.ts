@@ -24,8 +24,19 @@ const createStaffSchema = z.object({
   hourlyRate: z.number().positive(),
 });
 
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(6),
+  newPassword: z.string().min(6),
+});
+
 router.post('/login', validateBody(loginSchema), authController.login);
 router.get('/me', authenticate, authController.me);
+router.post(
+  '/change-password',
+  authenticate,
+  validateBody(changePasswordSchema),
+  authController.changePassword
+);
 router.post(
   '/managers',
   authenticate,

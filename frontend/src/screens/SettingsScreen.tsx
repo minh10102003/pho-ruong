@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -9,19 +9,52 @@ import {
   Modal,
   Alert,
   RefreshControl,
+  ScrollView,
 } from 'react-native';
 import AppSwitch from '../components/AppSwitch';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback } from 'react';
 import { useMenuSettingsStore } from '../store/menuSettingsStore';
 import { BigButton } from '../components/BigButton';
 import { useAuthStore } from '../store/authStore';
+import { api } from '../services/api';
 import { COLORS, MENU_ADMIN_CATEGORY_ORDER, MENU_CATEGORY_LABELS, MENU_CATEGORY_OPTIONS } from '../constants';
 import { formatCurrency } from '../utils/format';
 import { formStyles } from '../styles/formStyles';
 import { MenuItem } from '../types';
 
 type FormMode = 'add' | 'edit';
+type SettingsTab = 'menu' | 'account';
+
+const SETTINGS_TABS: { id: SettingsTab; label: string }[] = [
+  { id: 'menu', label: 'Cài đặt món ăn' },
+  { id: 'account', label: 'Thông tin' },
+];
+
+function SettingsTabBar({
+  activeTab,
+  onChange,
+}: {
+  activeTab: SettingsTab;
+  onChange: (tab: SettingsTab) => void;
+}) {
+  return (
+    <View style={styles.tabBar}>
+      {SETTINGS_TABS.map((tab) => {
+        const active = activeTab === tab.id;
+        return (
+          <TouchableOpacity
+            key={tab.id}
+            style={[styles.tabBtn, active && styles.tabBtnActive]}
+            onPress={() => onChange(tab.id)}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.tabBtnText, active && styles.tabBtnTextActive]}>{tab.label}</Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
 
 function MenuItemFormModal({
   visible,
@@ -128,10 +161,7 @@ function MenuItemFormModal({
   );
 }
 
-// Màn hình cài đặt thực đơn
-export default function SettingsScreen() {
-  const router = useRouter();
-  const logout = useAuthStore((s) => s.logout);
+function MenuSettingsTab() {
   const { items, loading, fetchItems, createItem, updateItem, toggleActive } =
     useMenuSettingsStore();
   const [modalVisible, setModalVisible] = useState(false);
@@ -140,7 +170,7 @@ export default function SettingsScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchItems();
-    }, [])
+    }, [fetchItems])
   );
 
   const sections = useMemo(() => {
@@ -190,13 +220,8 @@ export default function SettingsScreen() {
     }
   };
 
-  const handleLogout = async () => {
-    await logout();
-    router.replace('/login');
-  };
-
   return (
-    <View style={styles.container}>
+    <>
       <SectionList
         sections={sections}
         keyExtractor={(item) => item.id}
@@ -234,9 +259,6 @@ export default function SettingsScreen() {
         ListEmptyComponent={
           !loading ? <Text style={styles.empty}>Chưa có món trong thực đơn</Text> : null
         }
-        ListFooterComponent={
-          <BigButton title="Đăng xuất" onPress={handleLogout} variant="outline" style={styles.logoutBtn} />
-        }
       />
 
       <MenuItemFormModal
@@ -247,15 +269,164 @@ export default function SettingsScreen() {
         onSave={handleSave}
         loading={loading}
       />
+    </>
+  );
+}
+
+function AccountSettingsTab() {
+  const router = useRouter();
+  const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleChangePassword = async () => {
+    if (!currentPassword || !newPassword) {
+      Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ mật khẩu');
+      return;
+    }
+    if (newPassword.length < 6) {
+      Alert.alert('Lỗi', 'Mật khẩu mới phải có ít nhất 6 ký tự');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      Alert.alert('Lỗi', 'Mật khẩu xác nhận không khớp');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await api.changePassword({
+        currentPassword,
+        newPassword,
+      });
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      Alert.alert('Thành công', 'Đã đổi mật khẩu');
+    } catch (e) {
+      Alert.alert('Lỗi', (e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    router.replace('/login');
+  };
+
+  return (
+    <ScrollView contentContainerStyle={styles.accountContent}>
+      <View style={styles.profileCard}>
+        <Text style={styles.profileLabel}>Tài khoản</Text>
+        <Text style={styles.profileName}>{user?.displayName ?? '—'}</Text>
+        <Text style={styles.profilePhone}>{user?.phone ?? '—'}</Text>
+      </View>
+
+      <View style={styles.passwordCard}>
+        <Text style={formStyles.sectionTitle}>Đổi mật khẩu</Text>
+
+        <Text style={[formStyles.label, formStyles.labelFirst]}>Mật khẩu hiện tại</Text>
+        <TextInput
+          style={formStyles.input}
+          value={currentPassword}
+          onChangeText={setCurrentPassword}
+          secureTextEntry
+          placeholder="Nhập mật khẩu hiện tại"
+          placeholderTextColor={COLORS.placeholder}
+          autoCapitalize="none"
+        />
+
+        <Text style={formStyles.label}>Mật khẩu mới</Text>
+        <TextInput
+          style={formStyles.input}
+          value={newPassword}
+          onChangeText={setNewPassword}
+          secureTextEntry
+          placeholder="Ít nhất 6 ký tự"
+          placeholderTextColor={COLORS.placeholder}
+          autoCapitalize="none"
+        />
+
+        <Text style={formStyles.label}>Xác nhận mật khẩu mới</Text>
+        <TextInput
+          style={formStyles.input}
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
+          secureTextEntry
+          placeholder="Nhập lại mật khẩu mới"
+          placeholderTextColor={COLORS.placeholder}
+          autoCapitalize="none"
+        />
+
+        <BigButton
+          title="Lưu mật khẩu mới"
+          onPress={handleChangePassword}
+          loading={loading}
+          style={styles.savePasswordBtn}
+        />
+      </View>
+
+      <BigButton title="Đăng xuất" onPress={handleLogout} variant="outline" />
+    </ScrollView>
+  );
+}
+
+export default function SettingsScreen() {
+  const [activeTab, setActiveTab] = useState<SettingsTab>('menu');
+
+  return (
+    <View style={styles.container}>
+      <SettingsTabBar activeTab={activeTab} onChange={setActiveTab} />
+      <View style={styles.tabPanel}>
+        {activeTab === 'menu' ? <MenuSettingsTab /> : <AccountSettingsTab />}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
+  tabBar: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 8,
+    backgroundColor: COLORS.background,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  tabBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surface,
+    alignItems: 'center',
+  },
+  tabBtnActive: {
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.selected,
+  },
+  tabBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+  },
+  tabBtnTextActive: {
+    color: COLORS.primaryDark,
+    fontWeight: '700',
+  },
+  tabPanel: { flex: 1 },
   list: { padding: 16, paddingBottom: 32 },
   addBtn: { marginBottom: 16 },
-  logoutBtn: { marginTop: 24 },
   sectionHeader: {
     backgroundColor: COLORS.secondary,
     paddingHorizontal: 12,
@@ -282,6 +453,26 @@ const styles = StyleSheet.create({
   rowInactive: { opacity: 0.75 },
   hiddenLabel: { fontSize: 12, color: COLORS.textSecondary, marginTop: 4, fontStyle: 'italic' },
   empty: { textAlign: 'center', color: COLORS.textSecondary, padding: 40 },
+  accountContent: { padding: 16, paddingBottom: 32, gap: 16 },
+  profileCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    gap: 4,
+  },
+  profileLabel: { fontSize: 13, color: COLORS.textSecondary, fontWeight: '600' },
+  profileName: { fontSize: 22, fontWeight: '800', color: COLORS.text },
+  profilePhone: { fontSize: 15, color: COLORS.primary, fontWeight: '600' },
+  passwordCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  savePasswordBtn: { marginTop: 8 },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',

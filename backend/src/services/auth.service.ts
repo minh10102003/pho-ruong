@@ -122,6 +122,25 @@ export class AuthService {
 
     return toAuthUser(user);
   }
+
+  async changePassword(userId: string, currentPassword: string, newPassword: string) {
+    const user = await userRepository.findById(userId);
+    if (!user || !user.isActive) {
+      throw new Error('Tài khoản không tồn tại hoặc đã bị vô hiệu');
+    }
+
+    const valid = await verifyPassword(currentPassword, user.passwordHash);
+    if (!valid) {
+      throw new Error('Mật khẩu hiện tại không đúng');
+    }
+
+    if (currentPassword === newPassword) {
+      throw new Error('Mật khẩu mới phải khác mật khẩu hiện tại');
+    }
+
+    const passwordHash = await hashPassword(newPassword);
+    await userRepository.updatePassword(userId, passwordHash);
+  }
 }
 
 export const authService = new AuthService();
