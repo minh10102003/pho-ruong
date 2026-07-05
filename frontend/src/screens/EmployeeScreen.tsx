@@ -50,18 +50,21 @@ function EmployeeFormModal({
   onSave: (data: {
     fullName: string;
     phone?: string;
+    password?: string;
     hourlyRate: number;
   }) => void;
   loading: boolean;
 }) {
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
   const [hourlyRate, setHourlyRate] = useState('');
 
   useEffect(() => {
     if (visible) {
       setFullName(employee?.fullName ?? '');
       setPhone(employee?.phone ?? '');
+      setPassword('');
       setHourlyRate(employee ? String(Number(employee.hourlyRate)) : '');
     }
   }, [visible, employee]);
@@ -72,6 +75,14 @@ function EmployeeFormModal({
       Alert.alert('Lỗi', 'Vui lòng nhập tên nhân viên');
       return;
     }
+    if (mode === 'add' && !phone.trim()) {
+      Alert.alert('Lỗi', 'Vui lòng nhập số điện thoại đăng nhập');
+      return;
+    }
+    if (mode === 'add' && password.length < 6) {
+      Alert.alert('Lỗi', 'Mật khẩu tối thiểu 6 ký tự');
+      return;
+    }
     if (!parsedRate || parsedRate <= 0) {
       Alert.alert('Lỗi', 'Vui lòng nhập lương/giờ hợp lệ');
       return;
@@ -79,6 +90,7 @@ function EmployeeFormModal({
     onSave({
       fullName: fullName.trim(),
       phone: phone.trim() || undefined,
+      password: mode === 'add' ? password : undefined,
       hourlyRate: parsedRate,
     });
   };
@@ -97,7 +109,7 @@ function EmployeeFormModal({
           </TouchableOpacity>
 
           <Text style={formStyles.modalTitle}>
-            {mode === 'add' ? 'Thêm nhân viên' : 'Cập nhật nhân viên'}
+            {mode === 'add' ? 'Thêm nhân viên + tài khoản' : 'Cập nhật nhân viên'}
           </Text>
 
           <Text style={[formStyles.label, formStyles.labelFirst]}>Họ tên</Text>
@@ -109,7 +121,9 @@ function EmployeeFormModal({
             placeholderTextColor={COLORS.placeholder}
           />
 
-          <Text style={formStyles.label}>Số điện thoại (tuỳ chọn)</Text>
+          <Text style={formStyles.label}>
+            {mode === 'add' ? 'Số điện thoại đăng nhập' : 'Số điện thoại (tuỳ chọn)'}
+          </Text>
           <TextInput
             style={formStyles.input}
             value={phone}
@@ -117,7 +131,22 @@ function EmployeeFormModal({
             placeholder="090..."
             placeholderTextColor={COLORS.placeholder}
             keyboardType="phone-pad"
+            editable={mode === 'add'}
           />
+
+          {mode === 'add' && (
+            <>
+              <Text style={formStyles.label}>Mật khẩu đăng nhập</Text>
+              <TextInput
+                style={formStyles.input}
+                value={password}
+                onChangeText={setPassword}
+                placeholder="Tối thiểu 6 ký tự"
+                placeholderTextColor={COLORS.placeholder}
+                secureTextEntry
+              />
+            </>
+          )}
 
           <Text style={formStyles.label}>Lương / giờ (đ)</Text>
           <TextInput
@@ -149,6 +178,7 @@ export default function EmployeeScreen() {
     payroll,
     loading,
     createEmployee,
+    createStaffAccount,
     updateEmployee,
     checkIn,
     checkOut,
@@ -228,12 +258,18 @@ export default function EmployeeScreen() {
   const handleSaveEmployee = async (data: {
     fullName: string;
     phone?: string;
+    password?: string;
     hourlyRate: number;
   }) => {
     try {
       if (formMode === 'add') {
-        await createEmployee(data);
-        Alert.alert('Thành công', 'Đã thêm nhân viên');
+        await createStaffAccount({
+          fullName: data.fullName,
+          phone: data.phone!,
+          password: data.password!,
+          hourlyRate: data.hourlyRate,
+        });
+        Alert.alert('Thành công', 'Đã tạo nhân viên và tài khoản đăng nhập');
       } else if (editingEmployee) {
         await updateEmployee(editingEmployee.id, data);
         await fetchPayroll(payrollYear, payrollMonth);

@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { hashPassword } from '../src/utils/password';
 
 const prisma = new PrismaClient();
 
@@ -183,6 +184,26 @@ async function main() {
 
   await clearLegacyInventorySamples();
   await upsertInventoryCatalog();
+
+  const adminPhone = process.env.SEED_ADMIN_PHONE || '0900000000';
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD || 'admin123';
+  const passwordHash = await hashPassword(adminPassword);
+  await prisma.user.upsert({
+    where: { phone: adminPhone },
+    update: {
+      passwordHash,
+      displayName: 'Admin',
+      role: 'ADMIN',
+      isActive: true,
+    },
+    create: {
+      phone: adminPhone,
+      passwordHash,
+      displayName: 'Admin',
+      role: 'ADMIN',
+    },
+  });
+  console.log(`✅ Admin seed: ${adminPhone} / ${adminPassword}`);
 
   console.log('✅ Seed hoàn tất!');
 }

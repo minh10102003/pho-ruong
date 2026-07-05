@@ -1,4 +1,4 @@
-import EmployeeScreen from '../src/screens/EmployeeScreen';
+import EmployeeScreen from '../../src/screens/EmployeeScreen';
 
 export default function EmployeesPage() {
   return <EmployeeScreen />;

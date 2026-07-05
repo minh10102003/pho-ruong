@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { validateBody } from '../middleware/validate';
+import { requireRoles } from '../middleware/auth';
 import { employeeController } from '../controllers/employee.controller';
 
 const router = Router();
@@ -27,12 +28,22 @@ const updateEmployeeSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
-router.get('/employees', employeeController.getEmployees);
-router.get('/employees/open-timesheets', employeeController.getOpenTimesheets);
+router.get('/employees', requireRoles('MANAGER', 'ADMIN'), employeeController.getEmployees);
+router.get(
+  '/employees/open-timesheets',
+  requireRoles('MANAGER', 'ADMIN'),
+  employeeController.getOpenTimesheets
+);
 router.get('/employees/:id/open-timesheet', employeeController.getOpenTimesheet);
-router.post('/employees', validateBody(employeeSchema), employeeController.createEmployee);
+router.post(
+  '/employees',
+  requireRoles('MANAGER', 'ADMIN'),
+  validateBody(employeeSchema),
+  employeeController.createEmployee
+);
 router.patch(
   '/employees/:id',
+  requireRoles('MANAGER', 'ADMIN'),
   validateBody(updateEmployeeSchema),
   employeeController.updateEmployee
 );

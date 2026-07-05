@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { validateBody } from '../middleware/validate';
+import { requireRoles } from '../middleware/auth';
 import { orderController } from '../controllers/order.controller';
 
 const router = Router();
@@ -47,9 +48,19 @@ const updateMenuItemSchema = z.object({
 
 // Thực đơn
 router.get('/menu', orderController.getMenu);
-router.get('/menu/all', orderController.getAllMenu);
-router.post('/menu', validateBody(createMenuItemSchema), orderController.createMenuItem);
-router.patch('/menu/:id', validateBody(updateMenuItemSchema), orderController.updateMenuItem);
+router.get('/menu/all', requireRoles('MANAGER', 'ADMIN'), orderController.getAllMenu);
+router.post(
+  '/menu',
+  requireRoles('MANAGER', 'ADMIN'),
+  validateBody(createMenuItemSchema),
+  orderController.createMenuItem
+);
+router.patch(
+  '/menu/:id',
+  requireRoles('MANAGER', 'ADMIN'),
+  validateBody(updateMenuItemSchema),
+  orderController.updateMenuItem
+);
 
 // Đơn hàng
 router.post('/orders', validateBody(createOrderSchema), orderController.createOrder);

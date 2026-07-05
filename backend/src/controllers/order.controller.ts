@@ -70,6 +70,16 @@ export class OrderController {
 
   updateStatus = async (req: Request, res: Response, next: NextFunction) => {
     try {
+      const user = req.user;
+      if (user?.role === 'STAFF' && req.body.status === 'PAID') {
+        res.status(403).json({ success: false, error: 'Nhân viên không có quyền thanh toán' });
+        return;
+      }
+      if (user?.role === 'STAFF' && req.body.paymentMethod) {
+        res.status(403).json({ success: false, error: 'Nhân viên không có quyền thanh toán' });
+        return;
+      }
+
       const order = await orderService.updateOrderStatus(
         req.params.id,
         req.body.status,

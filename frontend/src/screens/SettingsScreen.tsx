@@ -11,10 +11,11 @@ import {
   RefreshControl,
 } from 'react-native';
 import AppSwitch from '../components/AppSwitch';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback } from 'react';
 import { useMenuSettingsStore } from '../store/menuSettingsStore';
 import { BigButton } from '../components/BigButton';
+import { useAuthStore } from '../store/authStore';
 import { COLORS, MENU_ADMIN_CATEGORY_ORDER, MENU_CATEGORY_LABELS, MENU_CATEGORY_OPTIONS } from '../constants';
 import { formatCurrency } from '../utils/format';
 import { formStyles } from '../styles/formStyles';
@@ -129,6 +130,8 @@ function MenuItemFormModal({
 
 // Màn hình cài đặt thực đơn
 export default function SettingsScreen() {
+  const router = useRouter();
+  const logout = useAuthStore((s) => s.logout);
   const { items, loading, fetchItems, createItem, updateItem, toggleActive } =
     useMenuSettingsStore();
   const [modalVisible, setModalVisible] = useState(false);
@@ -187,6 +190,11 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleLogout = async () => {
+    await logout();
+    router.replace('/login');
+  };
+
   return (
     <View style={styles.container}>
       <SectionList
@@ -226,6 +234,9 @@ export default function SettingsScreen() {
         ListEmptyComponent={
           !loading ? <Text style={styles.empty}>Chưa có món trong thực đơn</Text> : null
         }
+        ListFooterComponent={
+          <BigButton title="Đăng xuất" onPress={handleLogout} variant="outline" style={styles.logoutBtn} />
+        }
       />
 
       <MenuItemFormModal
@@ -244,6 +255,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   list: { padding: 16, paddingBottom: 32 },
   addBtn: { marginBottom: 16 },
+  logoutBtn: { marginTop: 24 },
   sectionHeader: {
     backgroundColor: COLORS.secondary,
     paddingHorizontal: 12,

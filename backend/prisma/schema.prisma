@@ -31,6 +31,12 @@ enum EmployeeRole {
   CASHIER
 }
 
+enum AppRole {
+  ADMIN
+  MANAGER
+  STAFF
+}
+
 // --- MENU & ĐƠN HÀNG ---
 
 /// Món ăn trên thực đơn (Phở chín, Phở tái, Quẩy...)
@@ -131,6 +137,7 @@ model Employee {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   timesheets  Timesheet[]
+  user        User?
 
   @@map("employees")
 }
@@ -178,4 +185,24 @@ model PaymentConfig {
   updatedAt     DateTime @updatedAt
 
   @@map("payment_configs")
+}
+
+// --- TÀI KHOẢN ĐĂNG NHẬP ---
+
+/// Tài khoản đăng nhập (Admin / Quản lý / Nhân viên)
+model User {
+  id           String   @id @default(uuid())
+  phone        String   @unique
+  passwordHash String
+  role         AppRole
+  displayName  String
+  employeeId   String?  @unique
+  employee     Employee? @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+  isActive     Boolean  @default(true)
+  createdById  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  lastLoginAt  DateTime?
+
+  @@map("users")
 }

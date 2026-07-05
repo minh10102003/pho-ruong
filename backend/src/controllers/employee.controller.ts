@@ -23,6 +23,11 @@ export class EmployeeController {
 
   getOpenTimesheet = async (req: Request, res: Response, next: NextFunction) => {
     try {
+      const user = req.user!;
+      if (user.role === 'STAFF' && user.employeeId !== req.params.id) {
+        res.status(403).json({ success: false, error: 'Không có quyền truy cập' });
+        return;
+      }
       const data = await employeeService.getOpenTimesheet(req.params.id);
       res.json({ success: true, data });
     } catch (e) {
@@ -50,6 +55,11 @@ export class EmployeeController {
 
   checkIn = async (req: Request, res: Response, next: NextFunction) => {
     try {
+      const user = req.user!;
+      if (user.role === 'STAFF' && user.employeeId !== req.body.employeeId) {
+        res.status(403).json({ success: false, error: 'Chỉ được check-in cho chính mình' });
+        return;
+      }
       const data = await employeeService.checkIn(req.body);
       res.status(201).json({ success: true, data });
     } catch (e) {
@@ -68,9 +78,20 @@ export class EmployeeController {
 
   getPayroll = async (req: Request, res: Response, next: NextFunction) => {
     try {
+      const user = req.user!;
       const year = parseInt(req.query.year as string) || new Date().getFullYear();
       const month = parseInt(req.query.month as string) || new Date().getMonth() + 1;
       const employeeId = req.query.employeeId as string | undefined;
+
+      if (user.role === 'STAFF') {
+        if (!user.employeeId) {
+          res.status(403).json({ success: false, error: 'Tài khoản chưa gắn nhân viên' });
+          return;
+        }
+        const data = await employeeService.getPayrollForEmployee(user.employeeId, year, month);
+        res.json({ success: true, data });
+        return;
+      }
 
       const data = employeeId
         ? await employeeService.getPayrollForEmployee(employeeId, year, month)

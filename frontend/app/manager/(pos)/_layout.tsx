@@ -1,6 +1,6 @@
 import { Stack } from 'expo-router';
-import { COLORS } from '../../src/constants';
-import { SettingsHeaderButton } from '../../src/components/SettingsHeaderButton';
+import { COLORS } from '../../../src/constants';
+import { SettingsHeaderButton } from '../../../src/components/SettingsHeaderButton';
 
 // Stack navigation trong tab POS: Bàn → Món → Đơn
 export default function PosLayout() {

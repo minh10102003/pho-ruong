@@ -1,19 +1,20 @@
 import 'react-native-gesture-handler';
 import { useEffect, useState } from 'react';
-import { Tabs } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { COLORS } from '../src/constants';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { installAudioUnlock } from '../src/utils/sounds';
 import AppLoadingScreen from '../src/components/AppLoadingScreen';
-import { SettingsHeaderButton } from '../src/components/SettingsHeaderButton';
+import { useAuthStore, getRoleHomePath } from '../src/store/authStore';
 
-const TAB_BAR_HEIGHT = 76;
-const TAB_ICON_SIZE = 28;
 const SPLASH_MIN_MS = 1200;
 
-// Layout chính - Tab navigation cho 4 module
 export default function RootLayout() {
+  const router = useRouter();
+  const segments = useSegments();
+  const hydrated = useAuthStore((s) => s.hydrated);
+  const user = useAuthStore((s) => s.user);
+  const restoreSession = useAuthStore((s) => s.restoreSession);
   const [ready, setReady] = useState(false);
+  const [sessionChecked, setSessionChecked] = useState(false);
 
   useEffect(() => {
     installAudioUnlock();
@@ -21,86 +22,61 @@ export default function RootLayout() {
     return () => clearTimeout(timer);
   }, []);
 
-  if (!ready) {
+  useEffect(() => {
+    if (!hydrated || !ready || sessionChecked) return;
+
+    const check = async () => {
+      if (!user) {
+        await restoreSession();
+      }
+      setSessionChecked(true);
+    };
+    void check();
+  }, [hydrated, ready, sessionChecked, user, restoreSession]);
+
+  useEffect(() => {
+    if (!ready || !hydrated || !sessionChecked) return;
+
+    const inAuthGroup = segments[0] === 'login';
+    const currentUser = useAuthStore.getState().user;
+
+    if (!currentUser && !inAuthGroup && segments[0] !== undefined) {
+      router.replace('/login');
+      return;
+    }
+
+    if (currentUser && inAuthGroup) {
+      router.replace(getRoleHomePath(currentUser.role));
+      return;
+    }
+
+    if (currentUser) {
+      const area = segments[0];
+      if (area === 'admin' && currentUser.role !== 'ADMIN') {
+        router.replace(getRoleHomePath(currentUser.role));
+        return;
+      }
+      if (area === 'manager' && currentUser.role === 'STAFF') {
+        router.replace('/staff');
+        return;
+      }
+      if (area === 'staff' && currentUser.role !== 'STAFF') {
+        router.replace(getRoleHomePath(currentUser.role));
+      }
+    }
+  }, [ready, hydrated, sessionChecked, segments, router, user]);
+
+  if (!ready || !hydrated || !sessionChecked) {
     return <AppLoadingScreen />;
   }
 
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: COLORS.primary,
-        tabBarInactiveTintColor: COLORS.textSecondary,
-        tabBarStyle: {
-          backgroundColor: COLORS.surface,
-          borderTopColor: COLORS.border,
-          height: TAB_BAR_HEIGHT,
-          paddingTop: 6,
-          paddingBottom: 10,
-        },
-        tabBarLabelStyle: {
-          fontSize: 13,
-          fontWeight: '600',
-          marginBottom: 2,
-        },
-        headerStyle: { backgroundColor: COLORS.primary },
-        headerTintColor: '#FFF',
-        headerTitleStyle: { fontWeight: '700' },
-        headerRight: () => <SettingsHeaderButton />,
-      }}
-    >
-      <Tabs.Screen
-        name="(pos)"
-        options={{
-          title: 'Menu',
-          headerShown: false,
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="restaurant" size={TAB_ICON_SIZE} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="orders"
-        options={{
-          title: 'Đơn',
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="receipt" size={TAB_ICON_SIZE} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="inventory"
-        options={{
-          title: 'Kho',
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="cube" size={TAB_ICON_SIZE} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="employees"
-        options={{
-          title: 'Nhân viên',
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="people" size={TAB_ICON_SIZE} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="reports"
-        options={{
-          title: 'Báo cáo',
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="bar-chart" size={TAB_ICON_SIZE} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: 'Cài đặt',
-          href: null,
-        }}
-      />
-    </Tabs>
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="index" />
+      <Stack.Screen name="login" />
+      <Stack.Screen name="manager" />
+      <Stack.Screen name="staff" />
+      <Stack.Screen name="admin" />
+    </Stack>
   );
 }

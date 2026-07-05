@@ -26,6 +26,12 @@ interface EmployeeState {
     phone?: string;
     hourlyRate: number;
   }) => Promise<void>;
+  createStaffAccount: (data: {
+    fullName: string;
+    phone: string;
+    password: string;
+    hourlyRate: number;
+  }) => Promise<void>;
   updateEmployee: (
     id: string,
     data: {
@@ -36,7 +42,7 @@ interface EmployeeState {
   ) => Promise<void>;
   checkIn: (employeeId: string) => Promise<void>;
   checkOut: (timesheetId: string) => Promise<void>;
-  fetchPayroll: (year: number, month: number) => Promise<void>;
+  fetchPayroll: (year: number, month: number, employeeId?: string) => Promise<void>;
 }
 
 export const useEmployeeStore = create<EmployeeState>((set, get) => ({
@@ -102,6 +108,18 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
     }
   },
 
+  createStaffAccount: async (data) => {
+    set({ loading: true, error: null });
+    try {
+      await api.createStaffAccount(data);
+      const employees = await api.getEmployees();
+      set({ employees, loading: false });
+    } catch (e) {
+      set({ error: (e as Error).message, loading: false });
+      throw e;
+    }
+  },
+
   updateEmployee: async (id, data) => {
     set({ loading: true, error: null });
     try {
@@ -148,10 +166,10 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
     }
   },
 
-  fetchPayroll: async (year, month) => {
+  fetchPayroll: async (year, month, employeeId) => {
     set({ loading: true });
     try {
-      const data = await api.getPayroll(year, month);
+      const data = await api.getPayroll(year, month, employeeId);
       const payroll = Array.isArray(data) ? data : [data];
       set({ payroll, loading: false });
     } catch (e) {

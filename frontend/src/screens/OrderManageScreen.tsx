@@ -28,6 +28,7 @@ import { getOrderItemDisplayName } from '../utils/orderItemMeta';
 import { playCashPaymentSound, playTransferPaymentSound } from '../utils/sounds';
 import { Order, OrderItem, PaymentMethod } from '../types';
 import { api } from '../services/api';
+import { useAuthStore } from '../store/authStore';
 
 const PAYMENT_BLOCKED_MESSAGE =
   'vẫn còn món chưa ra đủ. Vui lòng đánh dấu đã ra món hết trước khi thanh toán.';
@@ -463,6 +464,8 @@ export default function OrderManageScreen() {
     removeOrderItem,
   } = useOrderManageStore();
   const { setSelectedTable, clearCart, closeCart } = usePosStore();
+  const user = useAuthStore((s) => s.user);
+  const canPayOrders = user?.role === 'MANAGER' || user?.role === 'ADMIN';
 
   useFocusEffect(
     useCallback(() => {
@@ -645,11 +648,13 @@ export default function OrderManageScreen() {
 
       <View style={styles.cardFooter}>
         <Text style={styles.total}>{formatCurrency(getOrderItemsTotal(order))}</Text>
-        <BigButton
-          title="Thanh toán"
-          onPress={() => openPayment(order)}
-          style={styles.actionBtn}
-        />
+        {canPayOrders ? (
+          <BigButton
+            title="Thanh toán"
+            onPress={() => openPayment(order)}
+            style={styles.actionBtn}
+          />
+        ) : null}
       </View>
     </View>
   );

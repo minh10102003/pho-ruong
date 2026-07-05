@@ -8,13 +8,13 @@ export function SettingsHeaderButton() {
   const router = useRouter();
   const pathname = usePathname();
 
-  if (pathname === '/settings') {
+  if (pathname === '/manager/settings' || pathname === '/settings') {
     return null;
   }
 
   return (
     <Pressable
-      onPress={() => router.push('/settings')}
+      onPress={() => router.push('/manager/settings')}
       hitSlop={12}
       style={styles.button}
       accessibilityRole="button"

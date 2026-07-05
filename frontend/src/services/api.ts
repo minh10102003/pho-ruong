@@ -1,12 +1,18 @@
 import { API_BASE_URL } from '../constants';
 import { decodeOrderItemMeta } from '../utils/orderItemMeta';
+import { AuthUser } from '../types/auth';
 
 // Client HTTP gọi API Backend
 class ApiClient {
   private baseUrl: string;
+  private token: string | null = null;
 
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl;
+  }
+
+  setToken(token: string | null) {
+    this.token = token;
   }
 
   private async request<T>(
@@ -14,12 +20,17 @@ class ApiClient {
     options: RequestInit = {}
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...(options.headers as Record<string, string> | undefined),
+    };
+    if (this.token) {
+      headers.Authorization = `Bearer ${this.token}`;
+    }
+
     const response = await fetch(url, {
       ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
+      headers,
     });
 
     const json = await response.json();
@@ -27,6 +38,37 @@ class ApiClient {
       throw new Error(json.error || 'Lỗi kết nối API');
     }
     return json.data;
+  }
+
+  // --- AUTH ---
+  login(phone: string, password: string) {
+    return this.request<{ token: string; user: AuthUser }>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ phone, password }),
+    });
+  }
+
+  getMe() {
+    return this.request<AuthUser>('/auth/me');
+  }
+
+  createManagerAccount(body: { fullName: string; phone: string; password: string }) {
+    return this.request<AuthUser>('/auth/managers', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  }
+
+  createStaffAccount(body: {
+    fullName: string;
+    phone: string;
+    password: string;
+    hourlyRate: number;
+  }) {
+    return this.request<AuthUser>('/auth/staff', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
   }
 
   private normalizeOrder(order: import('../types').Order): import('../types').Order {

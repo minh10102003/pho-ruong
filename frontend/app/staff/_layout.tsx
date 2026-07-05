@@ -1,0 +1,70 @@
+import { Tabs } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { COLORS } from '../../src/constants';
+
+const TAB_BAR_HEIGHT = 76;
+const TAB_ICON_SIZE = 28;
+
+export default function StaffLayout() {
+  return (
+    <Tabs
+      screenOptions={{
+        tabBarActiveTintColor: COLORS.primary,
+        tabBarInactiveTintColor: COLORS.textSecondary,
+        tabBarStyle: {
+          backgroundColor: COLORS.surface,
+          borderTopColor: COLORS.border,
+          height: TAB_BAR_HEIGHT,
+          paddingTop: 6,
+          paddingBottom: 10,
+        },
+        tabBarLabelStyle: {
+          fontSize: 13,
+          fontWeight: '600',
+          marginBottom: 2,
+        },
+        headerStyle: { backgroundColor: COLORS.primary },
+        headerTintColor: '#FFF',
+        headerTitleStyle: { fontWeight: '700' },
+      }}
+    >
+      <Tabs.Screen
+        name="(pos)"
+        options={{
+          title: 'Menu',
+          headerShown: false,
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="restaurant" size={TAB_ICON_SIZE} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="orders"
+        options={{
+          title: 'Đơn',
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="receipt" size={TAB_ICON_SIZE} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="inventory"
+        options={{
+          title: 'Kho',
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="cube" size={TAB_ICON_SIZE} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="employees"
+        options={{
+          title: 'Cá nhân',
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="person" size={TAB_ICON_SIZE} color={color} />
+          ),
+        }}
+      />
+    </Tabs>
+  );
+}

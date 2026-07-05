@@ -6,7 +6,9 @@ import inventoryRoutes from './routes/inventory.routes';
 import employeeRoutes from './routes/employee.routes';
 import reportRoutes from './routes/report.routes';
 import paymentRoutes from './routes/payment.routes';
+import authRoutes from './routes/auth.routes';
 import { errorHandler } from './middleware/validate';
+import { authenticate } from './middleware/auth';
 
 const app = express();
 
@@ -19,12 +21,15 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', service: 'pho-restaurant-api' });
 });
 
-// API routes
-app.use('/api/orders', orderRoutes);
-app.use('/api/inventory', inventoryRoutes);
-app.use('/api/employees', employeeRoutes);
-app.use('/api/reports', reportRoutes);
-app.use('/api/payment', paymentRoutes);
+// Auth (login public)
+app.use('/api/auth', authRoutes);
+
+// Protected API routes
+app.use('/api/orders', authenticate, orderRoutes);
+app.use('/api/inventory', authenticate, inventoryRoutes);
+app.use('/api/employees', authenticate, employeeRoutes);
+app.use('/api/reports', authenticate, reportRoutes);
+app.use('/api/payment', authenticate, paymentRoutes);
 
 app.use(errorHandler);
 

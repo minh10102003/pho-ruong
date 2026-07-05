@@ -1,4 +1,4 @@
-import PosMenuScreen from '../../src/screens/PosMenuScreen';
+import PosMenuScreen from '../../../src/screens/PosMenuScreen';
 
 export default function MenuPage() {
   return <PosMenuScreen />;
