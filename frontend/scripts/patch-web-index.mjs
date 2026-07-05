@@ -2,7 +2,23 @@ import { readFileSync, writeFileSync, copyFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const distDir = join(process.cwd(), 'dist');
+const publicDir = join(process.cwd(), 'public');
 const indexPath = join(distDir, 'index.html');
+
+// Luôn đồng bộ icon/PWA từ public/ → dist/ sau mỗi lần export
+const publicAssets = [
+  'apple-touch-icon.png',
+  'favicon.png',
+  'icon-192.png',
+  'manifest.webmanifest',
+  '_redirects',
+];
+
+for (const file of publicAssets) {
+  copyFileSync(join(publicDir, file), join(distDir, file));
+}
+console.log('Synced PWA assets from public/ to dist/');
+
 let html = readFileSync(indexPath, 'utf8');
 
 const tags = [
