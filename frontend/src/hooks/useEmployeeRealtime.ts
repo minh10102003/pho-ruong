@@ -41,7 +41,7 @@ export function useEmployeeRealtime(
       ws.onopen = () => stopPolling();
       ws.onmessage = (event) => {
         const msg = JSON.parse(event.data);
-        if (msg.type === 'EMPLOYEE_UPDATE') {
+        if (msg.type === 'EMPLOYEE_UPDATE' || msg.type === 'CHECKIN_UPDATE') {
           refresh();
         }
       };

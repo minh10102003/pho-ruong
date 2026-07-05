@@ -240,6 +240,49 @@ class ApiClient {
     });
   }
 
+  requestCheckIn(employeeId: string) {
+    return this.request<import('../types').CheckInRequest>('/employees/timesheets/request-check-in', {
+      method: 'POST',
+      body: JSON.stringify({ employeeId }),
+    });
+  }
+
+  getPendingCheckInRequests() {
+    return this.request<import('../types').CheckInRequest[]>(
+      '/employees/timesheets/check-in-requests/pending'
+    );
+  }
+
+  getMyPendingCheckInRequest() {
+    return this.request<import('../types').CheckInRequest | null>(
+      '/employees/timesheets/check-in-requests/mine'
+    );
+  }
+
+  approveCheckInRequest(requestId: string) {
+    return this.request<import('../types').CheckInRequest>(
+      `/employees/timesheets/check-in-requests/${requestId}/approve`,
+      { method: 'POST' }
+    );
+  }
+
+  rejectCheckInRequest(requestId: string, rejectReason?: string) {
+    return this.request<import('../types').CheckInRequest>(
+      `/employees/timesheets/check-in-requests/${requestId}/reject`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ rejectReason }),
+      }
+    );
+  }
+
+  cancelMyCheckInRequest() {
+    return this.request<import('../types').CheckInRequest>(
+      '/employees/timesheets/check-in-requests/mine/cancel',
+      { method: 'POST' }
+    );
+  }
+
   checkOut(timesheetId: string) {
     return this.request<import('../types').Timesheet>('/employees/timesheets/check-out', {
       method: 'POST',

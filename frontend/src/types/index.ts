@@ -99,6 +99,27 @@ export interface Timesheet {
   employee: Employee;
 }
 
+export interface CheckInRequest {
+  id: string;
+  employeeId: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  requestedAt: string;
+  reviewedAt?: string | null;
+  reviewedById?: string | null;
+  rejectReason?: string | null;
+  timesheetId?: string | null;
+  employee: Employee;
+}
+
+export interface CheckInSocketPayload {
+  action: 'requested' | 'approved' | 'rejected' | 'cancelled';
+  requestId: string;
+  employeeId: string;
+  employeeName?: string;
+  message?: string;
+  timesheetId?: string;
+}
+
 export interface PayrollEntry {
   employee: Employee;
   year: number;

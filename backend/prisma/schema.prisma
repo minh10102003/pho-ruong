@@ -124,6 +124,12 @@ model InventoryReceipt {
   @@map("inventory_receipts")
 }
 
+enum CheckInRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 // --- NHÂN VIÊN & CHẤM CÔNG ---
 
 /// Nhân viên
@@ -137,6 +143,7 @@ model Employee {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   timesheets  Timesheet[]
+  checkInRequests CheckInRequest[]
   user        User?
 
   @@map("employees")
@@ -151,8 +158,25 @@ model Timesheet {
   note       String?
   createdAt  DateTime  @default(now())
   employee   Employee  @relation(fields: [employeeId], references: [id])
+  checkInRequest CheckInRequest?
 
   @@map("timesheets")
+}
+
+/// Yêu cầu check-in chờ quản lý duyệt
+model CheckInRequest {
+  id           String               @id @default(uuid())
+  employeeId   String
+  status       CheckInRequestStatus @default(PENDING)
+  requestedAt  DateTime             @default(now())
+  reviewedAt   DateTime?
+  reviewedById String?
+  rejectReason String?
+  timesheetId  String?              @unique
+  employee     Employee             @relation(fields: [employeeId], references: [id])
+  timesheet    Timesheet?           @relation(fields: [timesheetId], references: [id])
+
+  @@map("check_in_requests")
 }
 
 // --- CẤU HÌNH THUẾ ---

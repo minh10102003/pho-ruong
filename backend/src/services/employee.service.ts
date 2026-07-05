@@ -14,6 +14,10 @@ export class EmployeeService {
     return employeeRepository.findOpenTimesheet(employeeId);
   }
 
+  async getTimesheetById(id: string) {
+    return employeeRepository.findTimesheetById(id);
+  }
+
   async getOpenTimesheets() {
     return employeeRepository.findAllOpenTimesheets();
   }

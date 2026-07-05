@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../store/authStore';
 import { useEmployeeStore } from '../store/employeeStore';
+import { useCheckInRealtime } from '../hooks/useCheckInRealtime';
 import { BigButton } from '../components/BigButton';
 import { COLORS } from '../constants';
 import { formStyles } from '../styles/formStyles';
@@ -21,8 +22,18 @@ export default function StaffProfileScreen() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
-  const { openTimesheets, payroll, loading, checkIn, checkOut, fetchPayroll, syncCurrentTimesheet } =
-    useEmployeeStore();
+  const {
+    openTimesheets,
+    myPendingCheckInRequest,
+    payroll,
+    loading,
+    requestCheckIn,
+    cancelMyCheckInRequest,
+    checkOut,
+    fetchPayroll,
+    syncCurrentTimesheet,
+    fetchMyPendingCheckInRequest,
+  } = useEmployeeStore();
 
   const employeeId = user?.employeeId ?? '';
   const [payrollYear, setPayrollYear] = useState(getCurrentPeriod().year);
@@ -30,18 +41,31 @@ export default function StaffProfileScreen() {
 
   const openTimesheet = employeeId ? openTimesheets[employeeId] : null;
   const payrollEntry = Array.isArray(payroll) ? payroll[0] : payroll;
+  const pendingRequest = myPendingCheckInRequest?.status === 'PENDING' ? myPendingCheckInRequest : null;
+
+  useCheckInRealtime(undefined, payrollYear, payrollMonth);
 
   useEffect(() => {
     if (!employeeId) return;
     syncCurrentTimesheet(employeeId);
+    fetchMyPendingCheckInRequest();
     fetchPayroll(payrollYear, payrollMonth, employeeId);
-  }, [employeeId, payrollYear, payrollMonth, syncCurrentTimesheet, fetchPayroll]);
+  }, [employeeId, payrollYear, payrollMonth, syncCurrentTimesheet, fetchMyPendingCheckInRequest, fetchPayroll]);
 
-  const handleCheckIn = async () => {
+  const handleRequestCheckIn = async () => {
     if (!employeeId) return;
     try {
-      await checkIn(employeeId);
-      Alert.alert('Thành công', 'Check-in thành công!');
+      await requestCheckIn(employeeId);
+      Alert.alert('Đã gửi', 'Yêu cầu check-in đang chờ quản lý duyệt.');
+    } catch (e) {
+      Alert.alert('Lỗi', (e as Error).message);
+    }
+  };
+
+  const handleCancelRequest = async () => {
+    try {
+      await cancelMyCheckInRequest();
+      Alert.alert('Đã hủy', 'Đã hủy yêu cầu check-in.');
     } catch (e) {
       Alert.alert('Lỗi', (e as Error).message);
     }
@@ -86,12 +110,30 @@ export default function StaffProfileScreen() {
           <>
             <Text style={styles.status}>Đang trong ca làm</Text>
             <Text style={styles.meta}>
-              Check-in: {new Date(openTimesheet.checkIn).toLocaleString('vi-VN')}
+              Bắt đầu tính giờ: {new Date(openTimesheet.checkIn).toLocaleString('vi-VN')}
             </Text>
             <BigButton title="Check-out" onPress={handleCheckOut} loading={loading} />
           </>
+        ) : pendingRequest ? (
+          <>
+            <View style={styles.pendingBadge}>
+              <Text style={styles.pendingTitle}>Chờ quản lý duyệt</Text>
+              <Text style={styles.meta}>
+                Gửi lúc: {new Date(pendingRequest.requestedAt).toLocaleString('vi-VN')}
+              </Text>
+              <Text style={styles.pendingHint}>
+                Thời gian ca làm chỉ được tính sau khi quản lý duyệt check-in.
+              </Text>
+            </View>
+            <BigButton
+              title="Hủy yêu cầu"
+              onPress={handleCancelRequest}
+              loading={loading}
+              variant="outline"
+            />
+          </>
         ) : (
-          <BigButton title="Check-in" onPress={handleCheckIn} loading={loading} />
+          <BigButton title="Gửi yêu cầu check-in" onPress={handleRequestCheckIn} loading={loading} />
         )}
       </View>
 
@@ -141,6 +183,14 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   status: { fontSize: 16, fontWeight: '700', color: COLORS.primary },
+  pendingBadge: {
+    backgroundColor: COLORS.occupied,
+    borderRadius: 10,
+    padding: 12,
+    gap: 6,
+  },
+  pendingTitle: { fontSize: 16, fontWeight: '700', color: COLORS.warning },
+  pendingHint: { fontSize: 13, color: COLORS.textSecondary, lineHeight: 18 },
   meta: { fontSize: 14, color: COLORS.textSecondary },
   stat: { fontSize: 15, color: COLORS.text },
   salary: { fontSize: 18, fontWeight: '800', color: COLORS.primaryDark },

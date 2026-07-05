@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Employee, PayrollEntry, Timesheet } from '../types';
+import { Employee, PayrollEntry, Timesheet, CheckInRequest } from '../types';
 import { api } from '../services/api';
 
 function mapOpenTimesheets(timesheets: Timesheet[]): Record<string, Timesheet> {
@@ -14,6 +14,8 @@ interface EmployeeState {
   employees: Employee[];
   openTimesheets: Record<string, Timesheet>;
   currentTimesheet: Timesheet | null;
+  pendingCheckInRequests: CheckInRequest[];
+  myPendingCheckInRequest: CheckInRequest | null;
   payroll: PayrollEntry[];
   loading: boolean;
   error: string | null;
@@ -41,6 +43,12 @@ interface EmployeeState {
     }
   ) => Promise<void>;
   checkIn: (employeeId: string) => Promise<void>;
+  requestCheckIn: (employeeId: string) => Promise<void>;
+  cancelMyCheckInRequest: () => Promise<void>;
+  fetchPendingCheckInRequests: () => Promise<void>;
+  fetchMyPendingCheckInRequest: () => Promise<void>;
+  approveCheckInRequest: (requestId: string) => Promise<void>;
+  rejectCheckInRequest: (requestId: string, rejectReason?: string) => Promise<void>;
   checkOut: (timesheetId: string) => Promise<void>;
   fetchPayroll: (year: number, month: number, employeeId?: string) => Promise<void>;
 }
@@ -49,6 +57,8 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
   employees: [],
   openTimesheets: {},
   currentTimesheet: null,
+  pendingCheckInRequests: [],
+  myPendingCheckInRequest: null,
   payroll: [],
   loading: false,
   error: null,
@@ -147,6 +157,75 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
     }
   },
 
+  requestCheckIn: async (employeeId) => {
+    set({ loading: true, error: null });
+    try {
+      const request = await api.requestCheckIn(employeeId);
+      set({ myPendingCheckInRequest: request, loading: false });
+    } catch (e) {
+      set({ error: (e as Error).message, loading: false });
+      throw e;
+    }
+  },
+
+  cancelMyCheckInRequest: async () => {
+    set({ loading: true, error: null });
+    try {
+      await api.cancelMyCheckInRequest();
+      set({ myPendingCheckInRequest: null, loading: false });
+    } catch (e) {
+      set({ error: (e as Error).message, loading: false });
+      throw e;
+    }
+  },
+
+  fetchPendingCheckInRequests: async () => {
+    try {
+      const pendingCheckInRequests = await api.getPendingCheckInRequests();
+      set({ pendingCheckInRequests });
+    } catch (e) {
+      set({ error: (e as Error).message });
+    }
+  },
+
+  fetchMyPendingCheckInRequest: async () => {
+    try {
+      const myPendingCheckInRequest = await api.getMyPendingCheckInRequest();
+      set({ myPendingCheckInRequest });
+    } catch (e) {
+      set({ error: (e as Error).message });
+    }
+  },
+
+  approveCheckInRequest: async (requestId) => {
+    set({ loading: true, error: null });
+    try {
+      const approved = await api.approveCheckInRequest(requestId);
+      set((state) => {
+        const pendingCheckInRequests = state.pendingCheckInRequests.filter((r) => r.id !== requestId);
+        return { pendingCheckInRequests, loading: false };
+      });
+      await get().fetchOpenTimesheets();
+    } catch (e) {
+      set({ error: (e as Error).message, loading: false });
+      throw e;
+    }
+  },
+
+  rejectCheckInRequest: async (requestId, rejectReason) => {
+    set({ loading: true, error: null });
+    try {
+      await api.rejectCheckInRequest(requestId, rejectReason);
+      set((state) => ({
+        pendingCheckInRequests: state.pendingCheckInRequests.filter((r) => r.id !== requestId),
+        loading: false,
+      }));
+    } catch (e) {
+      set({ error: (e as Error).message, loading: false });
+      throw e;
+    }
+  },
+
   checkOut: async (timesheetId) => {
     set({ loading: true });
     try {
@@ -183,8 +262,12 @@ export function refreshEmployeeData(
   payrollYear?: number,
   payrollMonth?: number
 ) {
-  const { fetchEmployees, fetchOpenTimesheets, syncCurrentTimesheet, fetchPayroll } =
-    useEmployeeStore.getState();
+  const {
+    fetchEmployees,
+    fetchOpenTimesheets,
+    syncCurrentTimesheet,
+    fetchPayroll,
+  } = useEmployeeStore.getState();
   const tasks: Promise<void>[] = [fetchEmployees(), fetchOpenTimesheets()];
   if (selectedEmployeeId) {
     tasks.push(syncCurrentTimesheet(selectedEmployeeId));

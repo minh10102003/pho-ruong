@@ -30,6 +30,13 @@ export class EmployeeRepository {
     });
   }
 
+  async findTimesheetById(id: string) {
+    return prisma.timesheet.findUnique({
+      where: { id },
+      include: { employee: true },
+    });
+  }
+
   async findAllOpenTimesheets() {
     return prisma.timesheet.findMany({
       where: { checkOut: null },

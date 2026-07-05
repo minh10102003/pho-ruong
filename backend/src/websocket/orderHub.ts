@@ -27,6 +27,10 @@ class OrderWebSocketHub {
     this.broadcast('EMPLOYEE_UPDATE', payload);
   }
 
+  broadcastCheckInUpdate(payload: unknown): void {
+    this.broadcast('CHECKIN_UPDATE', payload);
+  }
+
   private broadcast(type: string, payload?: unknown): void {
     const message = JSON.stringify({ type, data: payload });
     this.clients.forEach((client) => {

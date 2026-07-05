@@ -13,6 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useEmployeeStore } from '../store/employeeStore';
 import { useEmployeeRealtime } from '../hooks/useEmployeeRealtime';
+import { useCheckInRealtime } from '../hooks/useCheckInRealtime';
 import { BigButton } from '../components/BigButton';
 import { COLORS } from '../constants';
 import { formatCurrency } from '../utils/format';
@@ -175,6 +176,7 @@ export default function EmployeeScreen() {
   const {
     employees,
     openTimesheets,
+    pendingCheckInRequests,
     payroll,
     loading,
     createEmployee,
@@ -184,6 +186,8 @@ export default function EmployeeScreen() {
     checkOut,
     fetchPayroll,
     syncCurrentTimesheet,
+    approveCheckInRequest,
+    rejectCheckInRequest,
   } = useEmployeeStore();
 
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
@@ -205,6 +209,7 @@ export default function EmployeeScreen() {
   const canCheckOut = Boolean(selectedOpenTimesheet);
 
   useEmployeeRealtime(selectedEmployeeId || undefined, payrollYear, payrollMonth);
+  useCheckInRealtime(selectedEmployeeId || undefined, payrollYear, payrollMonth);
 
   useEffect(() => {
     fetchPayroll(payrollYear, payrollMonth);
@@ -305,8 +310,66 @@ export default function EmployeeScreen() {
     }
   };
 
+  const handleApproveCheckIn = async (requestId: string, employeeName: string) => {
+    try {
+      await approveCheckInRequest(requestId);
+      Alert.alert('Đã duyệt', `${employeeName} đã bắt đầu ca làm.`);
+    } catch (e) {
+      Alert.alert('Lỗi', (e as Error).message);
+    }
+  };
+
+  const handleRejectCheckIn = (requestId: string, employeeName: string) => {
+    Alert.alert('Từ chối check-in', `Xác nhận từ chối yêu cầu của ${employeeName}?`, [
+      { text: 'Huỷ', style: 'cancel' },
+      {
+        text: 'Từ chối',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await rejectCheckInRequest(requestId);
+            Alert.alert('Đã từ chối', 'Nhân viên sẽ nhận thông báo.');
+          } catch (e) {
+            Alert.alert('Lỗi', (e as Error).message);
+          }
+        },
+      },
+    ]);
+  };
+
   return (
     <ScrollView style={styles.container}>
+      {pendingCheckInRequests.length > 0 && (
+        <View style={styles.section}>
+          <Text style={formStyles.sectionTitle}>
+            Duyệt check-in ({pendingCheckInRequests.length})
+          </Text>
+          {pendingCheckInRequests.map((request) => (
+            <View key={request.id} style={styles.approvalCard}>
+              <Text style={styles.empName}>{request.employee.fullName}</Text>
+              <Text style={styles.approvalMeta}>
+                Gửi lúc: {new Date(request.requestedAt).toLocaleString('vi-VN')}
+              </Text>
+              <View style={styles.approvalActions}>
+                <BigButton
+                  title="Duyệt"
+                  onPress={() => handleApproveCheckIn(request.id, request.employee.fullName)}
+                  loading={loading}
+                  style={styles.approvalBtn}
+                />
+                <BigButton
+                  title="Từ chối"
+                  onPress={() => handleRejectCheckIn(request.id, request.employee.fullName)}
+                  variant="outline"
+                  loading={loading}
+                  style={styles.approvalBtn}
+                />
+              </View>
+            </View>
+          ))}
+        </View>
+      )}
+
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={formStyles.sectionTitleInline}>Quản lý nhân viên</Text>
@@ -489,6 +552,16 @@ const styles = StyleSheet.create({
   editHint: { fontSize: 13, fontWeight: '600', color: COLORS.primary },
   empBtn: { marginBottom: 8 },
   checkRow: { flexDirection: 'row', marginTop: 12 },
+  approvalCard: {
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: COLORS.occupied,
+    marginBottom: 10,
+    gap: 8,
+  },
+  approvalMeta: { fontSize: 13, color: COLORS.textSecondary },
+  approvalActions: { flexDirection: 'row', gap: 8 },
+  approvalBtn: { flex: 1 },
   checkInfo: {
     marginTop: 12,
     textAlign: 'center',
