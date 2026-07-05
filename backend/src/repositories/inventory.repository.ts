@@ -7,6 +7,56 @@ export class InventoryRepository {
     return prisma.ingredient.findMany({ orderBy: [{ category: 'asc' }, { name: 'asc' }] });
   }
 
+  async findAllCategories() {
+    return prisma.ingredientCategory.findMany({ orderBy: { name: 'asc' } });
+  }
+
+  async findCategoryByName(name: string) {
+    return prisma.ingredientCategory.findUnique({ where: { name } });
+  }
+
+  async createCategory(name: string) {
+    return prisma.ingredientCategory.create({ data: { name } });
+  }
+
+  async ensureCategoryExists(name: string) {
+    await prisma.ingredientCategory.upsert({
+      where: { name },
+      create: { name },
+      update: {},
+    });
+  }
+
+  async renameCategory(oldName: string, newName: string) {
+    return prisma.$transaction(async (tx) => {
+      const existing = await tx.ingredientCategory.findUnique({ where: { name: oldName } });
+      if (existing) {
+        await tx.ingredientCategory.update({
+          where: { id: existing.id },
+          data: { name: newName },
+        });
+      } else {
+        await tx.ingredientCategory.create({ data: { name: newName } });
+      }
+      await tx.ingredient.updateMany({
+        where: { category: oldName },
+        data: { category: newName },
+      });
+    });
+  }
+
+  async deleteCategory(name: string) {
+    const ingredientCount = await prisma.ingredient.count({ where: { category: name } });
+    if (ingredientCount > 0) {
+      throw new Error('Không thể xóa hạng mục đang có nguyên liệu');
+    }
+    await prisma.ingredientCategory.deleteMany({ where: { name } });
+  }
+
+  async countIngredientsInCategory(name: string) {
+    return prisma.ingredient.count({ where: { category: name } });
+  }
+
   async findIngredientById(id: string) {
     return prisma.ingredient.findUnique({ where: { id } });
   }

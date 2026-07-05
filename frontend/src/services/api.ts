@@ -87,6 +87,32 @@ class ApiClient {
     });
   }
 
+  getManagedUsers() {
+    return this.request<import('../types/admin').ManagedUser[]>('/auth/users');
+  }
+
+  updateManagedUser(
+    id: string,
+    body: {
+      displayName?: string;
+      phone?: string;
+      password?: string;
+      isActive?: boolean;
+      hourlyRate?: number;
+    }
+  ) {
+    return this.request<import('../types/admin').ManagedUser>(`/auth/users/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    });
+  }
+
+  deleteManagedUser(id: string) {
+    return this.request<{ deleted: boolean }>(`/auth/users/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
   private normalizeOrder(order: import('../types').Order): import('../types').Order {
     return {
       ...order,
@@ -127,6 +153,12 @@ class ApiClient {
     });
   }
 
+  deleteMenuItem(id: string) {
+    return this.request<{ deleted: boolean }>(`/orders/menu/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
   createOrder(body: {
     items: { menuItemId: string; quantity: number; selection?: string; note?: string }[];
     note?: string;
@@ -164,6 +196,31 @@ class ApiClient {
   }
 
   // --- INVENTORY ---
+  getInventoryCategories() {
+    return this.request<import('../types/admin').InventoryCategoryItem[]>('/inventory/categories');
+  }
+
+  createInventoryCategory(name: string) {
+    return this.request<import('../types/admin').InventoryCategoryItem>('/inventory/categories', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    });
+  }
+
+  renameInventoryCategory(oldName: string, newName: string) {
+    return this.request<import('../types/admin').InventoryCategoryItem>('/inventory/categories/rename', {
+      method: 'PATCH',
+      body: JSON.stringify({ oldName, newName }),
+    });
+  }
+
+  deleteInventoryCategory(name: string) {
+    return this.request<{ deleted: boolean }>(
+      `/inventory/categories/${encodeURIComponent(name)}`,
+      { method: 'DELETE' }
+    );
+  }
+
   getIngredients() {
     return this.request<import('../types').Ingredient[]>('/inventory/ingredients');
   }

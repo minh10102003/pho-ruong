@@ -127,6 +127,15 @@ async function upsertInventoryCatalog() {
       });
     }
   }
+
+  const categories = [...new Set(INVENTORY_CATALOG.map((item) => item.category))];
+  for (const name of categories) {
+    await prisma.ingredientCategory.upsert({
+      where: { name },
+      create: { name },
+      update: {},
+    });
+  }
 }
 
 async function main() {

@@ -60,6 +60,14 @@ export class OrderRepository {
     return prisma.menuItem.findUnique({ where: { id } });
   }
 
+  async countMenuItemOrderRefs(id: string) {
+    return prisma.orderItem.count({ where: { menuItemId: id } });
+  }
+
+  async deleteMenuItem(id: string) {
+    return prisma.menuItem.delete({ where: { id } });
+  }
+
   async createOrder(data: Prisma.OrderCreateInput) {
     return prisma.order.create({
       data,

@@ -19,8 +19,11 @@ export class InventoryService {
       throw new Error('Đơn vị không được để trống');
     }
 
+    const category = dto.category.trim();
+    await inventoryRepository.ensureCategoryExists(category);
+
     return inventoryRepository.createIngredient({
-      category: dto.category.trim(),
+      category,
       name: dto.name.trim(),
       unit: dto.unit.trim(),
       minStock: dto.minStock ?? 0,
@@ -95,6 +98,53 @@ export class InventoryService {
 
   async getReceipts() {
     return inventoryRepository.findReceipts();
+  }
+
+  async getCategories() {
+    const [saved, ingredients] = await Promise.all([
+      inventoryRepository.findAllCategories(),
+      inventoryRepository.findAllIngredients(),
+    ]);
+    const names = new Set<string>(saved.map((item) => item.name));
+    for (const ingredient of ingredients) {
+      const category = ingredient.category?.trim();
+      if (category) names.add(category);
+    }
+    return Array.from(names)
+      .sort((a, b) => a.localeCompare(b, 'vi'))
+      .map((name) => ({ name }));
+  }
+
+  async createCategory(name: string) {
+    const trimmed = name.trim();
+    if (!trimmed) throw new Error('Tên hạng mục không được để trống');
+    const existing = await inventoryRepository.findCategoryByName(trimmed);
+    if (existing) throw new Error('Hạng mục đã tồn tại');
+    const ingredientCount = await inventoryRepository.countIngredientsInCategory(trimmed);
+    if (ingredientCount > 0) {
+      await inventoryRepository.ensureCategoryExists(trimmed);
+      return { name: trimmed };
+    }
+    const created = await inventoryRepository.createCategory(trimmed);
+    return { name: created.name };
+  }
+
+  async renameCategory(oldName: string, newName: string) {
+    const from = oldName.trim();
+    const to = newName.trim();
+    if (!from || !to) throw new Error('Tên hạng mục không hợp lệ');
+    if (from === to) return { name: to };
+    const conflict = await inventoryRepository.findCategoryByName(to);
+    if (conflict) throw new Error('Hạng mục mới đã tồn tại');
+    await inventoryRepository.renameCategory(from, to);
+    return { name: to };
+  }
+
+  async deleteCategory(name: string) {
+    const trimmed = name.trim();
+    if (!trimmed) throw new Error('Tên hạng mục không hợp lệ');
+    await inventoryRepository.deleteCategory(trimmed);
+    return { deleted: true };
   }
 }
 

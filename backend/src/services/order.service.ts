@@ -59,6 +59,20 @@ export class OrderService {
     });
   }
 
+  async deleteMenuItem(id: string) {
+    const existing = await orderRepository.findMenuItemById(id);
+    if (!existing) {
+      throw new Error('Không tìm thấy món');
+    }
+
+    const refs = await orderRepository.countMenuItemOrderRefs(id);
+    if (refs > 0) {
+      throw new Error('Món đã có trong đơn hàng. Hãy ẩn món thay vì xóa.');
+    }
+
+    return orderRepository.deleteMenuItem(id);
+  }
+
   private async buildOrderItems(dto: CreateOrderDto) {
     const orderItemsData: OrderItemInput[] = [];
     let subtotal = new Decimal(0);

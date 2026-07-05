@@ -40,6 +40,15 @@ export class OrderController {
     }
   };
 
+  deleteMenuItem = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      await orderService.deleteMenuItem(req.params.id);
+      res.json({ success: true, data: { deleted: true } });
+    } catch (e) {
+      next(e);
+    }
+  };
+
   createOrder = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const order = await orderService.createOrder(req.body);

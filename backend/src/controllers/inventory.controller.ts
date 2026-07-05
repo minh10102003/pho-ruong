@@ -56,6 +56,42 @@ export class InventoryController {
       next(e);
     }
   };
+
+  getCategories = async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const data = await inventoryService.getCategories();
+      res.json({ success: true, data });
+    } catch (e) {
+      next(e);
+    }
+  };
+
+  createCategory = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const data = await inventoryService.createCategory(req.body.name);
+      res.status(201).json({ success: true, data });
+    } catch (e) {
+      next(e);
+    }
+  };
+
+  renameCategory = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const data = await inventoryService.renameCategory(req.body.oldName, req.body.newName);
+      res.json({ success: true, data });
+    } catch (e) {
+      next(e);
+    }
+  };
+
+  deleteCategory = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const data = await inventoryService.deleteCategory(req.params.name);
+      res.json({ success: true, data });
+    } catch (e) {
+      next(e);
+    }
+  };
 }
 
 export const inventoryController = new InventoryController();

@@ -15,6 +15,7 @@ interface MenuSettingsState {
     data: { name?: string; price?: number; category?: string; isActive?: boolean }
   ) => Promise<void>;
   toggleActive: (id: string, isActive: boolean) => Promise<void>;
+  deleteItem: (id: string) => Promise<void>;
 }
 
 export const useMenuSettingsStore = create<MenuSettingsState>((set, get) => ({
@@ -65,6 +66,18 @@ export const useMenuSettingsStore = create<MenuSettingsState>((set, get) => ({
       void usePosStore.getState().fetchMenu();
     } catch (e) {
       set({ items: prev, error: (e as Error).message });
+      throw e;
+    }
+  },
+
+  deleteItem: async (id) => {
+    set({ loading: true, error: null });
+    try {
+      await api.deleteMenuItem(id);
+      await get().fetchItems();
+      void usePosStore.getState().fetchMenu();
+    } catch (e) {
+      set({ error: (e as Error).message, loading: false });
       throw e;
     }
   },

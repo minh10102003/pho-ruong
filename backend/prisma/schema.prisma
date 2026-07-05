@@ -93,6 +93,16 @@ model OrderItem {
 // --- KHO & NHẬP HÀNG ---
 
 /// Nguyên liệu (Bánh phở, Thịt bò, Gia vị...)
+model IngredientCategory {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("inventory_categories")
+}
+
+/// Nguyên liệu (Bánh phở, Thịt bò, Gia vị...)
 model Ingredient {
   id          String             @id @default(uuid())
   category    String             @default("Khác")

@@ -141,6 +141,127 @@ export class AuthService {
     const passwordHash = await hashPassword(newPassword);
     await userRepository.updatePassword(userId, passwordHash);
   }
+
+  async listManagedUsers() {
+    const users = await userRepository.findAllForAdmin();
+    return users.map((user) => ({
+      id: user.id,
+      phone: user.phone,
+      role: user.role,
+      displayName: user.displayName,
+      isActive: user.isActive,
+      employeeId: user.employeeId,
+      hourlyRate: user.employee ? Number(user.employee.hourlyRate) : null,
+    }));
+  }
+
+  async updateManagedUser(
+    userId: string,
+    actorId: string,
+    dto: {
+      displayName?: string;
+      phone?: string;
+      password?: string;
+      isActive?: boolean;
+      hourlyRate?: number;
+    }
+  ) {
+    if (userId === actorId) {
+      throw new Error('Không thể tự sửa tài khoản tại đây');
+    }
+
+    const user = await userRepository.findById(userId);
+    if (!user || user.role === AppRole.ADMIN) {
+      throw new Error('Không tìm thấy tài khoản');
+    }
+
+    if (dto.phone) {
+      const phone = dto.phone.trim();
+      const existing = await userRepository.findByPhone(phone);
+      if (existing && existing.id !== userId) {
+        throw new Error('Số điện thoại đã được sử dụng');
+      }
+    }
+
+    const passwordHash = dto.password ? await hashPassword(dto.password) : undefined;
+
+    const updated = await prisma.$transaction(async (tx) => {
+      if (user.employeeId && dto.hourlyRate !== undefined) {
+        await tx.employee.update({
+          where: { id: user.employeeId },
+          data: { hourlyRate: dto.hourlyRate },
+        });
+      }
+
+      if (user.employeeId && dto.displayName !== undefined) {
+        await tx.employee.update({
+          where: { id: user.employeeId },
+          data: { fullName: dto.displayName.trim() },
+        });
+      }
+
+      if (user.employeeId && dto.phone !== undefined) {
+        await tx.employee.update({
+          where: { id: user.employeeId },
+          data: { phone: dto.phone.trim() },
+        });
+      }
+
+      if (user.employeeId && dto.isActive !== undefined) {
+        await tx.employee.update({
+          where: { id: user.employeeId },
+          data: { isActive: dto.isActive },
+        });
+      }
+
+      return tx.user.update({
+        where: { id: userId },
+        data: {
+          ...(dto.displayName !== undefined && { displayName: dto.displayName.trim() }),
+          ...(dto.phone !== undefined && { phone: dto.phone.trim() }),
+          ...(dto.isActive !== undefined && { isActive: dto.isActive }),
+          ...(passwordHash && { passwordHash }),
+        },
+        include: { employee: true },
+      });
+    });
+
+    return {
+      id: updated.id,
+      phone: updated.phone,
+      role: updated.role,
+      displayName: updated.displayName,
+      isActive: updated.isActive,
+      employeeId: updated.employeeId,
+      hourlyRate: updated.employee ? Number(updated.employee.hourlyRate) : null,
+    };
+  }
+
+  async deleteManagedUser(userId: string, actorId: string) {
+    if (userId === actorId) {
+      throw new Error('Không thể tự xóa tài khoản của mình');
+    }
+
+    const user = await userRepository.findById(userId);
+    if (!user || user.role === AppRole.ADMIN) {
+      throw new Error('Không tìm thấy tài khoản');
+    }
+
+    await prisma.$transaction(async (tx) => {
+      if (user.employeeId) {
+        await tx.employee.update({
+          where: { id: user.employeeId },
+          data: { isActive: false },
+        });
+      }
+      await tx.user.update({
+        where: { id: userId },
+        data: { isActive: false },
+      });
+    });
+
+    return { deleted: true };
+  }
 }
 
 export const authService = new AuthService();

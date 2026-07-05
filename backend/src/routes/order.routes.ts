@@ -61,6 +61,11 @@ router.patch(
   validateBody(updateMenuItemSchema),
   orderController.updateMenuItem
 );
+router.delete(
+  '/menu/:id',
+  requireRoles('ADMIN'),
+  orderController.deleteMenuItem
+);
 
 // Đơn hàng
 router.post('/orders', validateBody(createOrderSchema), orderController.createOrder);

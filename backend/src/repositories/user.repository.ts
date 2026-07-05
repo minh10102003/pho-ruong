@@ -33,6 +33,22 @@ export class UserRepository {
       data: { passwordHash },
     });
   }
+
+  findAllForAdmin() {
+    return prisma.user.findMany({
+      where: { role: { in: ['MANAGER', 'STAFF'] } },
+      include: { employee: true },
+      orderBy: [{ role: 'asc' }, { displayName: 'asc' }],
+    });
+  }
+
+  updateUser(id: string, data: Prisma.UserUpdateInput) {
+    return prisma.user.update({
+      where: { id },
+      data,
+      include: { employee: true },
+    });
+  }
 }
 
 export const userRepository = new UserRepository();

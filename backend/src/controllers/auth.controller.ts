@@ -50,6 +50,33 @@ export class AuthController {
       next(e);
     }
   };
+
+  listUsers = async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const data = await authService.listManagedUsers();
+      res.json({ success: true, data });
+    } catch (e) {
+      next(e);
+    }
+  };
+
+  updateUser = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const data = await authService.updateManagedUser(req.params.id, req.user!.id, req.body);
+      res.json({ success: true, data });
+    } catch (e) {
+      next(e);
+    }
+  };
+
+  deleteUser = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const data = await authService.deleteManagedUser(req.params.id, req.user!.id);
+      res.json({ success: true, data });
+    } catch (e) {
+      next(e);
+    }
+  };
 }
 
 export const authController = new AuthController();

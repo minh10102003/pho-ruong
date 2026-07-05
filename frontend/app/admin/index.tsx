@@ -1,5 +1,5 @@
-import AdminHomeScreen from '../../src/screens/AdminHomeScreen';
+import { Redirect } from 'expo-router';
 
-export default function AdminPage() {
-  return <AdminHomeScreen />;
+export default function AdminIndex() {
+  return <Redirect href="/admin/menu" />;
 }

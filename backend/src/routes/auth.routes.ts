@@ -29,6 +29,14 @@ const changePasswordSchema = z.object({
   newPassword: z.string().min(6),
 });
 
+const updateUserSchema = z.object({
+  displayName: z.string().min(1).optional(),
+  phone: z.string().min(9).optional(),
+  password: z.string().min(6).optional(),
+  isActive: z.boolean().optional(),
+  hourlyRate: z.number().positive().optional(),
+});
+
 router.post('/login', validateBody(loginSchema), authController.login);
 router.get('/me', authenticate, authController.me);
 router.post(
@@ -36,6 +44,20 @@ router.post(
   authenticate,
   validateBody(changePasswordSchema),
   authController.changePassword
+);
+router.get('/users', authenticate, requireRoles('ADMIN'), authController.listUsers);
+router.patch(
+  '/users/:id',
+  authenticate,
+  requireRoles('ADMIN'),
+  validateBody(updateUserSchema),
+  authController.updateUser
+);
+router.delete(
+  '/users/:id',
+  authenticate,
+  requireRoles('ADMIN'),
+  authController.deleteUser
 );
 router.post(
   '/managers',
@@ -47,7 +69,7 @@ router.post(
 router.post(
   '/staff',
   authenticate,
-  requireRoles('MANAGER'),
+  requireRoles('MANAGER', 'ADMIN'),
   validateBody(createStaffSchema),
   authController.createStaff
 );
