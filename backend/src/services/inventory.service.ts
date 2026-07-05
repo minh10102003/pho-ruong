@@ -83,6 +83,7 @@ export class InventoryService {
         totalCost,
         supplier: dto.supplier,
         note: dto.note,
+        ...(dto.receivedAt ? { receivedAt: new Date(dto.receivedAt) } : {}),
         ingredient: { connect: { id: dto.ingredientId } },
       },
       dto.ingredientId,

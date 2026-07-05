@@ -139,6 +139,7 @@ class ApiClient {
     unitPrice: number;
     supplier: string;
     note?: string;
+    receivedAt?: string;
   }) {
     return this.request<import('../types').InventoryReceipt>('/inventory/receipts', {
       method: 'POST',

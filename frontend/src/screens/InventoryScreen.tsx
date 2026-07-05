@@ -10,10 +10,18 @@ import {
 } from 'react-native';
 import { useInventoryStore } from '../store/inventoryStore';
 import { BigButton } from '../components/BigButton';
+import {
+  ReceiptDateField,
+  createInitialReceiptDate,
+} from '../components/ReceiptDateField';
 import { COLORS } from '../constants';
-import { formatCurrency } from '../utils/format';
+import { formatCurrency, formatReceiptDate } from '../utils/format';
 import { formStyles } from '../styles/formStyles';
 import { formatQuantity, isLowStock, parseQuantity } from '../utils/inventory';
+import {
+  ReceiptDateMode,
+  toReceivedAtIso,
+} from '../utils/receiptDate';
 
 function parsePositiveNumber(value: string) {
   return Number(value.replace(',', '.').trim());
@@ -30,6 +38,8 @@ export default function InventoryScreen() {
   const [unitPrice, setUnitPrice] = useState('');
   const [supplier, setSupplier] = useState('');
   const [note, setNote] = useState('');
+  const [receiptDateMode, setReceiptDateMode] = useState<ReceiptDateMode>('today');
+  const [receiptDate, setReceiptDate] = useState(createInitialReceiptDate);
 
   useEffect(() => {
     fetchIngredients();
@@ -109,11 +119,14 @@ export default function InventoryScreen() {
         unitPrice: parsedUnitPrice,
         supplier: supplier.trim(),
         note: note.trim() || undefined,
+        receivedAt: toReceivedAtIso(receiptDateMode, receiptDate),
       });
       setQuantity('');
       setUnitPrice('');
       setSupplier('');
       setNote('');
+      setReceiptDateMode('today');
+      setReceiptDate(createInitialReceiptDate());
       Alert.alert('Thành công', 'Đã tạo phiếu nhập kho');
     } catch (e) {
       Alert.alert('Lỗi', (e as Error).message || 'Không thể tạo phiếu nhập');
@@ -204,6 +217,12 @@ export default function InventoryScreen() {
         )}
 
         <View style={formStyles.fieldGroup}>
+          <ReceiptDateField
+            mode={receiptDateMode}
+            value={receiptDate}
+            onModeChange={setReceiptDateMode}
+            onChange={setReceiptDate}
+          />
           <TextInput
             style={formStyles.input}
             placeholder={`Số lượng${selectedIngredient ? ` (${selectedIngredient.unit})` : ''}`}
@@ -256,7 +275,8 @@ export default function InventoryScreen() {
                 {r.ingredient.category} / {r.ingredient.name}
               </Text>
               <Text style={styles.receiptMeta}>
-                {formatQuantity(r.quantity)} {r.ingredient.unit} · NCC: {r.supplier}
+                {formatReceiptDate(r.receivedAt)} · {formatQuantity(r.quantity)} {r.ingredient.unit} · NCC:{' '}
+                {r.supplier}
               </Text>
               <Text style={styles.receiptCost}>{formatCurrency(r.totalCost)}</Text>
             </View>

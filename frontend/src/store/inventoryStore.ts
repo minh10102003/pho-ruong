@@ -28,6 +28,7 @@ interface InventoryState {
     unitPrice: number;
     supplier: string;
     note?: string;
+    receivedAt?: string;
   }) => Promise<void>;
 }
 

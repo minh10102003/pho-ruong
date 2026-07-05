@@ -25,6 +25,7 @@ const receiptSchema = z.object({
   unitPrice: z.number().positive(),
   supplier: z.string().min(1),
   note: z.string().optional(),
+  receivedAt: z.string().datetime().optional(),
 });
 
 router.get('/ingredients', inventoryController.getIngredients);

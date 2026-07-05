@@ -61,6 +61,7 @@ export interface CreateInventoryReceiptDto {
   unitPrice: number;
   supplier: string;
   note?: string;
+  receivedAt?: string;
 }
 
 export interface CreateEmployeeDto {

@@ -14,7 +14,7 @@ export default function Root({ children }: PropsWithChildren) {
         <meta name="theme-color" content="#468432" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="Phở Ruộng" />
+        <meta name="apple-mobile-web-app-title" content="PHỞ RUỘNG" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="icon" type="image/png" href="/favicon.png" />
         <link rel="manifest" href="/manifest.webmanifest" />
