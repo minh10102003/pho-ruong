@@ -5,6 +5,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../src/constants';
 import { installAudioUnlock } from '../src/utils/sounds';
 
+const TAB_BAR_HEIGHT = 76;
+const TAB_ICON_SIZE = 28;
+
 // Layout chính - Tab navigation cho 4 module
 export default function RootLayout() {
   useEffect(() => {
@@ -19,8 +22,14 @@ export default function RootLayout() {
         tabBarStyle: {
           backgroundColor: COLORS.surface,
           borderTopColor: COLORS.border,
-          paddingBottom: 4,
-          height: 60,
+          height: TAB_BAR_HEIGHT,
+          paddingTop: 6,
+          paddingBottom: 10,
+        },
+        tabBarLabelStyle: {
+          fontSize: 13,
+          fontWeight: '600',
+          marginBottom: 2,
         },
         headerStyle: { backgroundColor: COLORS.primary },
         headerTintColor: '#FFF',
@@ -32,8 +41,8 @@ export default function RootLayout() {
         options={{
           title: 'Menu',
           headerShown: false,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="restaurant" size={size} color={color} />
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="restaurant" size={TAB_ICON_SIZE} color={color} />
           ),
         }}
       />
@@ -41,8 +50,8 @@ export default function RootLayout() {
         name="orders"
         options={{
           title: 'Đơn',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="receipt" size={size} color={color} />
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="receipt" size={TAB_ICON_SIZE} color={color} />
           ),
         }}
       />
@@ -50,8 +59,8 @@ export default function RootLayout() {
         name="inventory"
         options={{
           title: 'Kho',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="cube" size={size} color={color} />
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="cube" size={TAB_ICON_SIZE} color={color} />
           ),
         }}
       />
@@ -59,8 +68,8 @@ export default function RootLayout() {
         name="employees"
         options={{
           title: 'Nhân viên',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="people" size={size} color={color} />
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="people" size={TAB_ICON_SIZE} color={color} />
           ),
         }}
       />
@@ -68,8 +77,8 @@ export default function RootLayout() {
         name="reports"
         options={{
           title: 'Báo cáo',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="bar-chart" size={size} color={color} />
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="bar-chart" size={TAB_ICON_SIZE} color={color} />
           ),
         }}
       />
@@ -77,8 +86,8 @@ export default function RootLayout() {
         name="settings"
         options={{
           title: 'Cài đặt',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="settings" size={size} color={color} />
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="settings" size={TAB_ICON_SIZE} color={color} />
           ),
         }}
       />
