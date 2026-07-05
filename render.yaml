@@ -1,0 +1,13 @@
+# Blueprint tham khảo cho Static Site FE (SPA routing).
+# Nếu đã tạo service thủ công trên Render, thêm Rewrite trong Dashboard (xem README deploy).
+services:
+  - type: web
+    name: pho-ruong-web
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm install && npm run export:web
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

@@ -1,7 +1,8 @@
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, copyFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-const indexPath = join(process.cwd(), 'dist', 'index.html');
+const distDir = join(process.cwd(), 'dist');
+const indexPath = join(distDir, 'index.html');
 let html = readFileSync(indexPath, 'utf8');
 
 const tags = [
@@ -22,3 +23,8 @@ if (!html.includes('apple-touch-icon')) {
   writeFileSync(indexPath, html, 'utf8');
   console.log('Patched dist/index.html with PWA icon tags');
 }
+
+// SPA fallback: Render/custom domain reload on /reports, /orders, ...
+writeFileSync(join(distDir, '_redirects'), '/* /index.html 200\n', 'utf8');
+copyFileSync(indexPath, join(distDir, '404.html'));
+console.log('Added SPA fallback files (_redirects, 404.html)');
