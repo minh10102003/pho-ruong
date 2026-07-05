@@ -1,18 +1,28 @@
 import 'react-native-gesture-handler';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../src/constants';
 import { installAudioUnlock } from '../src/utils/sounds';
+import AppLoadingScreen from '../src/components/AppLoadingScreen';
 
 const TAB_BAR_HEIGHT = 76;
 const TAB_ICON_SIZE = 28;
+const SPLASH_MIN_MS = 1200;
 
 // Layout chính - Tab navigation cho 4 module
 export default function RootLayout() {
+  const [ready, setReady] = useState(false);
+
   useEffect(() => {
     installAudioUnlock();
+    const timer = setTimeout(() => setReady(true), SPLASH_MIN_MS);
+    return () => clearTimeout(timer);
   }, []);
+
+  if (!ready) {
+    return <AppLoadingScreen />;
+  }
 
   return (
     <Tabs
