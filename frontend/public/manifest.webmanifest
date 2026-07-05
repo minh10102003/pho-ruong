@@ -1,0 +1,23 @@
+{
+  "name": "Phở Ruộng",
+  "short_name": "Ruộng",
+  "description": "Quản lý bán hàng quán phở",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#468432",
+  "theme_color": "#468432",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
