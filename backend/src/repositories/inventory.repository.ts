@@ -50,6 +50,16 @@ export class InventoryRepository {
     });
   }
 
+  async findReceiptsInPeriod(start: Date, end: Date) {
+    return prisma.inventoryReceipt.findMany({
+      where: {
+        receivedAt: { gte: start, lt: end },
+      },
+      include: { ingredient: true },
+      orderBy: [{ receivedAt: 'asc' }, { receiptCode: 'asc' }],
+    });
+  }
+
   async findReceipts(limit = 50) {
     return prisma.inventoryReceipt.findMany({
       include: { ingredient: true },

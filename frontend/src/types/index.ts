@@ -130,6 +130,60 @@ export interface TaxReport {
   netProfit: number;
 }
 
+export interface ImportReportItem {
+  ingredientId: string;
+  ingredientName: string;
+  unit: string;
+  totalQuantity: number;
+  totalCost: number;
+  receiptCount: number;
+}
+
+export interface ImportReportCategory {
+  category: string;
+  totalCost: number;
+  receiptCount: number;
+  items: ImportReportItem[];
+}
+
+export interface ImportReportTimelinePoint {
+  key: string;
+  label: string;
+  totalCost: number;
+  receiptCount: number;
+  totalQuantity: number;
+}
+
+export interface ImportReportDetail {
+  id: string;
+  receiptCode: string;
+  receivedAt: string;
+  category: string;
+  ingredientId: string;
+  ingredientName: string;
+  unit: string;
+  quantity: number;
+  unitPrice: number;
+  totalCost: number;
+  supplier: string;
+  note: string | null;
+}
+
+export interface ImportReport {
+  period: string;
+  from: string;
+  to: string;
+  summary: {
+    totalCost: number;
+    receiptCount: number;
+    categoryCount: number;
+    ingredientCount: number;
+  };
+  timeline: ImportReportTimelinePoint[];
+  byCategory: ImportReportCategory[];
+  details: ImportReportDetail[];
+}
+
 export interface ApiResponse<T> {
   success: boolean;
   data: T;

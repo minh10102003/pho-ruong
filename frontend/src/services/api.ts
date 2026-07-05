@@ -231,6 +231,12 @@ class ApiClient {
     return this.request<import('../types').TaxReport>(`/reports/tax?${params}`);
   }
 
+  getImportReport(period: 'day' | 'month' | 'year', date?: string) {
+    const params = new URLSearchParams({ period });
+    if (date) params.set('date', date);
+    return this.request<import('../types').ImportReport>(`/reports/imports?${params}`);
+  }
+
   exportTaxReport(period: 'day' | 'month' | 'year', date?: string) {
     const params = new URLSearchParams({ period });
     if (date) params.set('date', date);

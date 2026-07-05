@@ -1,45 +1,40 @@
 import { create } from 'zustand';
-import { RevenueDataPoint, TaxReport } from '../types';
+import { RevenueDataPoint, TaxReport, ImportReport } from '../types';
 import { api } from '../services/api';
 
-// Store Zustand quản lý state Báo cáo
 interface ReportState {
   revenue: RevenueDataPoint[];
   taxReport: TaxReport | null;
+  importReport: ImportReport | null;
   period: 'day' | 'month' | 'year';
   loading: boolean;
   error: string | null;
 
   setPeriod: (period: 'day' | 'month' | 'year') => void;
-  fetchRevenue: (date?: string) => Promise<void>;
-  fetchTaxReport: (date?: string) => Promise<void>;
+  fetchAll: (date?: string) => Promise<void>;
   exportTax: (date?: string) => Promise<string>;
 }
 
 export const useReportStore = create<ReportState>((set, get) => ({
   revenue: [],
   taxReport: null,
+  importReport: null,
   period: 'month',
   loading: false,
   error: null,
 
   setPeriod: (period) => set({ period }),
 
-  fetchRevenue: async (date) => {
-    set({ loading: true });
+  fetchAll: async (date) => {
+    set({ loading: true, error: null });
+    const period = get().period;
     try {
-      const revenue = await api.getRevenue(get().period, date);
-      set({ revenue, loading: false });
-    } catch (e) {
-      set({ error: (e as Error).message, loading: false });
-    }
-  },
-
-  fetchTaxReport: async (date) => {
-    set({ loading: true });
-    try {
-      const taxReport = await api.getTaxReport(get().period, date);
-      set({ taxReport, loading: false });
+      const [revenue, taxReport, importReport] = await Promise.all([
+        api.getRevenue(period, date),
+        api.getTaxReport(period, date),
+        api.getImportReport(period, date),
+      ]);
+      set({ revenue, taxReport, importReport, loading: false });
     } catch (e) {
       set({ error: (e as Error).message, loading: false });
     }

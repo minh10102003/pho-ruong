@@ -42,6 +42,19 @@ export class ReportController {
       next(e);
     }
   };
+
+  getImportReport = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const filter: ReportFilterDto = {
+        period: (req.query.period as 'day' | 'month' | 'year') || 'month',
+        date: req.query.date as string | undefined,
+      };
+      const data = await reportService.getImportReport(filter);
+      res.json({ success: true, data });
+    } catch (e) {
+      next(e);
+    }
+  };
 }
 
 export const reportController = new ReportController();
