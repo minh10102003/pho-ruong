@@ -12,7 +12,15 @@ function getToastMeta(action: CheckInSocketPayload['action']): { title: string; 
     case 'rejected':
       return { title: 'Check-in bị từ chối', type: 'warning' };
     case 'cancelled':
-      return { title: 'Yêu cầu đã hủy', type: 'info' };
+      return { title: 'Yêu cầu check-in đã hủy', type: 'info' };
+    case 'checkout_requested':
+      return { title: 'Yêu cầu check-out mới', type: 'info' };
+    case 'checkout_approved':
+      return { title: 'Check-out đã duyệt', type: 'success' };
+    case 'checkout_rejected':
+      return { title: 'Check-out bị từ chối', type: 'warning' };
+    case 'checkout_cancelled':
+      return { title: 'Yêu cầu check-out đã hủy', type: 'info' };
     default:
       return { title: 'Chấm công', type: 'info' };
   }
@@ -41,8 +49,16 @@ export function notifyCheckInEvent(
   const isOwnStaffEvent = isStaff && payload.employeeId === user.employeeId;
 
   const shouldNotify =
-    (isManager && (payload.action === 'requested' || payload.action === 'cancelled')) ||
-    (isOwnStaffEvent && (payload.action === 'approved' || payload.action === 'rejected'));
+    (isManager &&
+      (payload.action === 'requested' ||
+        payload.action === 'cancelled' ||
+        payload.action === 'checkout_requested' ||
+        payload.action === 'checkout_cancelled')) ||
+    (isOwnStaffEvent &&
+      (payload.action === 'approved' ||
+        payload.action === 'rejected' ||
+        payload.action === 'checkout_approved' ||
+        payload.action === 'checkout_rejected'));
 
   if (!shouldNotify || !payload.message) return;
 

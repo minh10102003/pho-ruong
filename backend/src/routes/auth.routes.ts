@@ -22,6 +22,7 @@ const createStaffSchema = z.object({
   phone: z.string().min(9),
   password: z.string().min(6),
   hourlyRate: z.number().positive(),
+  useBlockRounding: z.boolean().optional(),
 });
 
 const changePasswordSchema = z.object({
@@ -35,6 +36,7 @@ const updateUserSchema = z.object({
   password: z.string().min(6).optional(),
   isActive: z.boolean().optional(),
   hourlyRate: z.number().positive().optional(),
+  useBlockRounding: z.boolean().optional(),
 });
 
 router.post('/login', validateBody(loginSchema), authController.login);

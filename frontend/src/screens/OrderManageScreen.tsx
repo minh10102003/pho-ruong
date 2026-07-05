@@ -29,6 +29,7 @@ import { formatCurrency, formatDateTime } from '../utils/format';
 import { getOrderItemDisplayName } from '../utils/orderItemMeta';
 import { playCashPaymentSound, playTransferPaymentSound } from '../utils/sounds';
 import { Order, OrderItem, PaymentMethod } from '../types';
+import { confirmAsync } from '../utils/confirm';
 import { api } from '../services/api';
 
 const PAYMENT_BLOCKED_MESSAGE =
@@ -463,10 +464,12 @@ export default function OrderManageScreen() {
     fetchAll,
     updateOrderStatus,
     removeOrderItem,
+    deleteOrder,
   } = useOrderManageStore();
   const { setSelectedTable, clearCart, closeCart } = usePosStore();
   const user = useAuthStore((s) => s.user);
   const canPayOrders = user?.role === 'MANAGER' || user?.role === 'ADMIN';
+  const canDeleteHistory = user?.role === 'MANAGER' || user?.role === 'ADMIN';
 
   useFocusEffect(
     useCallback(() => {
@@ -566,6 +569,22 @@ export default function OrderManageScreen() {
     }
   };
 
+  const handleDeletePaidOrder = async (order: Order) => {
+    const confirmed = await confirmAsync(
+      'Xóa đơn',
+      `Xóa vĩnh viễn đơn ${order.orderNumber}? Hành động này không thể hoàn tác.`
+    );
+    if (!confirmed) return;
+    try {
+      await deleteOrder(order.id);
+      if (receiptOrder?.id === order.id) {
+        closeReceipt();
+      }
+    } catch (e) {
+      // error stored in orderManageStore
+    }
+  };
+
   const handleRemoveOrderItem = async (itemId: string) => {
     if (!detailOrder) return;
     const updated = await removeOrderItem(detailOrder.id, itemId);
@@ -661,35 +680,41 @@ export default function OrderManageScreen() {
   );
 
   const renderPaidOrder = (order: Order) => (
-    <TouchableOpacity
-      key={order.id}
-      style={styles.card}
-      onPress={() => openDetail(order)}
-      activeOpacity={0.7}
-    >
-      <OrderCardHeader
-        order={order}
-        badge={
-          <View style={[styles.badge, { backgroundColor: COLORS.success }]}>
-            <Text style={styles.badgeText}>Đã thanh toán</Text>
-          </View>
-        }
-      />
+    <View key={order.id} style={styles.card}>
+      <TouchableOpacity onPress={() => openDetail(order)} activeOpacity={0.7}>
+        <OrderCardHeader
+          order={order}
+          badge={
+            <View style={[styles.badge, { backgroundColor: COLORS.success }]}>
+              <Text style={styles.badgeText}>Đã thanh toán</Text>
+            </View>
+          }
+        />
 
-      <OrderItemsSummary order={order} />
-      <Text style={styles.timeText}>
-        Thanh toán: {order.paidAt ? formatDateTime(order.paidAt) : formatDateTime(order.createdAt)}
-      </Text>
-      {order.paymentMethod ? (
-        <Text style={styles.paymentMethodText}>
-          {PAYMENT_METHOD_LABELS[order.paymentMethod]}
+        <OrderItemsSummary order={order} />
+        <Text style={styles.timeText}>
+          Thanh toán: {order.paidAt ? formatDateTime(order.paidAt) : formatDateTime(order.createdAt)}
         </Text>
-      ) : null}
+        {order.paymentMethod ? (
+          <Text style={styles.paymentMethodText}>
+            {PAYMENT_METHOD_LABELS[order.paymentMethod]}
+          </Text>
+        ) : null}
+      </TouchableOpacity>
 
       <View style={styles.cardFooter}>
         <Text style={styles.total}>{formatCurrency(getOrderItemsTotal(order))}</Text>
+        {canDeleteHistory ? (
+          <TouchableOpacity
+            onPress={() => void handleDeletePaidOrder(order)}
+            hitSlop={8}
+            style={styles.deleteHistoryBtn}
+          >
+            <Ionicons name="trash-outline" size={22} color={COLORS.error} />
+          </TouchableOpacity>
+        ) : null}
       </View>
-    </TouchableOpacity>
+    </View>
   );
 
   const orders =
@@ -855,6 +880,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
   },
+  deleteHistoryBtn: { padding: 4 },
   total: { fontSize: 18, fontWeight: '700', color: COLORS.primary },
   actionBtn: { minHeight: 40, paddingVertical: 8, paddingHorizontal: 16, minWidth: 130 },
   modalOverlay: {

@@ -100,6 +100,13 @@ export class InventoryService {
     return inventoryRepository.findReceipts();
   }
 
+  async deleteReceipt(id: string) {
+    const receipt = await inventoryRepository.findReceiptById(id);
+    if (!receipt) throw new Error('Không tìm thấy phiếu nhập');
+    await inventoryRepository.deleteReceipt(id);
+    return { deleted: true };
+  }
+
   async getCategories() {
     const [saved, ingredients] = await Promise.all([
       inventoryRepository.findAllCategories(),

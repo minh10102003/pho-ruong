@@ -57,6 +57,15 @@ export class InventoryController {
     }
   };
 
+  deleteReceipt = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const data = await inventoryService.deleteReceipt(req.params.id);
+      res.json({ success: true, data });
+    } catch (e) {
+      next(e);
+    }
+  };
+
   getCategories = async (_req: Request, res: Response, next: NextFunction) => {
     try {
       const data = await inventoryService.getCategories();

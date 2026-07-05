@@ -77,5 +77,10 @@ router.delete(
 );
 router.post('/receipts', validateBody(receiptSchema), inventoryController.createReceipt);
 router.get('/receipts', inventoryController.getReceipts);
+router.delete(
+  '/receipts/:id',
+  requireRoles('MANAGER', 'ADMIN'),
+  inventoryController.deleteReceipt
+);
 
 export default router;

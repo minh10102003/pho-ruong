@@ -1,7 +1,15 @@
 import { Server as HttpServer } from 'http';
 import { Server } from 'socket.io';
 
-export type CheckInSocketAction = 'requested' | 'approved' | 'rejected' | 'cancelled';
+export type CheckInSocketAction =
+  | 'requested'
+  | 'approved'
+  | 'rejected'
+  | 'cancelled'
+  | 'checkout_requested'
+  | 'checkout_approved'
+  | 'checkout_rejected'
+  | 'checkout_cancelled';
 
 export interface CheckInSocketPayload {
   action: CheckInSocketAction;

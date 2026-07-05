@@ -111,6 +111,15 @@ export class OrderController {
       next(e);
     }
   };
+
+  deleteOrder = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const data = await orderService.deletePaidOrder(req.params.id);
+      res.json({ success: true, data });
+    } catch (e) {
+      next(e);
+    }
+  };
 }
 
 export const orderController = new OrderController();

@@ -33,6 +33,7 @@ export function CheckInNotificationLayer() {
         role: current.role,
         employeeId: current.employeeId ?? undefined,
         eventEmployeeId: payload.employeeId,
+        action: payload.action,
       });
     };
 

@@ -38,6 +38,7 @@ export default function AdminAccountsScreen() {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [hourlyRate, setHourlyRate] = useState('25000');
+  const [useBlockRounding, setUseBlockRounding] = useState(false);
   const [isActive, setIsActive] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -64,6 +65,7 @@ export default function AdminAccountsScreen() {
     setPhone('');
     setPassword('');
     setHourlyRate('25000');
+    setUseBlockRounding(false);
     setIsActive(true);
     setEditingUser(null);
   };
@@ -87,6 +89,7 @@ export default function AdminAccountsScreen() {
     setPhone(user.phone);
     setPassword('');
     setHourlyRate(user.hourlyRate ? String(user.hourlyRate) : '25000');
+    setUseBlockRounding(user.useBlockRounding ?? false);
     setIsActive(user.isActive);
     setModalVisible(true);
   };
@@ -124,6 +127,7 @@ export default function AdminAccountsScreen() {
           phone: phone.trim(),
           password,
           hourlyRate: rate,
+          useBlockRounding,
         });
       } else if (editingUser) {
         const body: {
@@ -132,6 +136,7 @@ export default function AdminAccountsScreen() {
           isActive: boolean;
           password?: string;
           hourlyRate?: number;
+          useBlockRounding?: boolean;
         } = {
           displayName: fullName.trim(),
           phone: phone.trim(),
@@ -151,6 +156,7 @@ export default function AdminAccountsScreen() {
             return;
           }
           body.hourlyRate = rate;
+          body.useBlockRounding = useBlockRounding;
         }
         await api.updateManagedUser(editingUser.id, body);
       }
@@ -194,6 +200,9 @@ export default function AdminAccountsScreen() {
         <Text style={styles.cardPhone}>{user.phone}</Text>
         {user.role === 'STAFF' && user.hourlyRate ? (
           <Text style={styles.cardMeta}>Lương/giờ: {user.hourlyRate.toLocaleString('vi-VN')}đ</Text>
+        ) : null}
+        {user.role === 'STAFF' && user.useBlockRounding ? (
+          <Text style={styles.cardMeta}>Tính giờ theo khối 30 phút</Text>
         ) : null}
         {!user.isActive ? <Text style={styles.inactiveLabel}>Đã vô hiệu</Text> : null}
       </TouchableOpacity>
@@ -282,6 +291,15 @@ export default function AdminAccountsScreen() {
                     placeholder="25000"
                     placeholderTextColor={COLORS.placeholder}
                   />
+                  <View style={styles.switchRow}>
+                    <View style={styles.switchTextWrap}>
+                      <Text style={styles.switchLabel}>Tính giờ theo khối 30 phút</Text>
+                      <Text style={styles.switchHint}>
+                        Bật: làm tròn xuống mốc 30 phút khi tính lương.
+                      </Text>
+                    </View>
+                    <AppSwitch value={useBlockRounding} onValueChange={setUseBlockRounding} />
+                  </View>
                 </>
               )}
 
@@ -361,7 +379,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginTop: 12,
+    gap: 12,
   },
+  switchTextWrap: { flex: 1 },
+  switchHint: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2, lineHeight: 17 },
   switchLabel: { fontSize: 15, fontWeight: '600', color: COLORS.text },
   modalActions: { flexDirection: 'row', gap: 12, marginTop: 16 },
   modalBtn: { flex: 1, minHeight: 48 },

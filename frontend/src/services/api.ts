@@ -80,6 +80,7 @@ class ApiClient {
     phone: string;
     password: string;
     hourlyRate: number;
+    useBlockRounding?: boolean;
   }) {
     return this.request<AuthUser>('/auth/staff', {
       method: 'POST',
@@ -99,6 +100,7 @@ class ApiClient {
       password?: string;
       isActive?: boolean;
       hourlyRate?: number;
+      useBlockRounding?: boolean;
     }
   ) {
     return this.request<import('../types/admin').ManagedUser>(`/auth/users/${id}`, {
@@ -191,6 +193,12 @@ class ApiClient {
     ).then((order) => (order ? this.normalizeOrder(order) : null));
   }
 
+  deleteOrder(orderId: string) {
+    return this.request<{ deleted: boolean }>(`/orders/orders/${orderId}`, {
+      method: 'DELETE',
+    });
+  }
+
   getPaymentConfig() {
     return this.request<import('../types').PaymentConfig>('/payment/config');
   }
@@ -266,6 +274,12 @@ class ApiClient {
     return this.request<import('../types').InventoryReceipt[]>('/inventory/receipts');
   }
 
+  deleteReceipt(id: string) {
+    return this.request<{ deleted: boolean }>(`/inventory/receipts/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
   // --- EMPLOYEE ---
   getEmployees() {
     return this.request<import('../types').Employee[]>('/employees/employees');
@@ -285,6 +299,7 @@ class ApiClient {
     fullName: string;
     phone?: string;
     hourlyRate: number;
+    useBlockRounding?: boolean;
   }) {
     return this.request<import('../types').Employee>('/employees/employees', {
       method: 'POST',
@@ -298,6 +313,7 @@ class ApiClient {
       fullName?: string;
       phone?: string | null;
       hourlyRate?: number;
+      useBlockRounding?: boolean;
     }
   ) {
     return this.request<import('../types').Employee>(`/employees/employees/${id}`, {
@@ -352,6 +368,49 @@ class ApiClient {
   cancelMyCheckInRequest() {
     return this.request<import('../types').CheckInRequest>(
       '/employees/timesheets/check-in-requests/mine/cancel',
+      { method: 'POST' }
+    );
+  }
+
+  requestCheckOut(timesheetId: string) {
+    return this.request<import('../types').CheckOutRequest>('/employees/timesheets/request-check-out', {
+      method: 'POST',
+      body: JSON.stringify({ timesheetId }),
+    });
+  }
+
+  getPendingCheckOutRequests() {
+    return this.request<import('../types').CheckOutRequest[]>(
+      '/employees/timesheets/check-out-requests/pending'
+    );
+  }
+
+  getMyPendingCheckOutRequest() {
+    return this.request<import('../types').CheckOutRequest | null>(
+      '/employees/timesheets/check-out-requests/mine'
+    );
+  }
+
+  approveCheckOutRequest(requestId: string) {
+    return this.request<import('../types').CheckOutRequest>(
+      `/employees/timesheets/check-out-requests/${requestId}/approve`,
+      { method: 'POST' }
+    );
+  }
+
+  rejectCheckOutRequest(requestId: string, rejectReason?: string) {
+    return this.request<import('../types').CheckOutRequest>(
+      `/employees/timesheets/check-out-requests/${requestId}/reject`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ rejectReason }),
+      }
+    );
+  }
+
+  cancelMyCheckOutRequest() {
+    return this.request<import('../types').CheckOutRequest>(
+      '/employees/timesheets/check-out-requests/mine/cancel',
       { method: 'POST' }
     );
   }

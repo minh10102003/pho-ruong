@@ -86,7 +86,13 @@ export class AuthService {
   }
 
   async createStaffAccount(
-    dto: { fullName: string; phone: string; password: string; hourlyRate: number },
+    dto: {
+      fullName: string;
+      phone: string;
+      password: string;
+      hourlyRate: number;
+      useBlockRounding?: boolean;
+    },
     createdById: string
   ) {
     const phone = dto.phone.trim();
@@ -104,6 +110,7 @@ export class AuthService {
           phone,
           role: 'STAFF',
           hourlyRate: dto.hourlyRate,
+          useBlockRounding: dto.useBlockRounding ?? false,
         },
       });
 
@@ -152,6 +159,7 @@ export class AuthService {
       isActive: user.isActive,
       employeeId: user.employeeId,
       hourlyRate: user.employee ? Number(user.employee.hourlyRate) : null,
+      useBlockRounding: user.employee?.useBlockRounding ?? null,
     }));
   }
 
@@ -164,6 +172,7 @@ export class AuthService {
       password?: string;
       isActive?: boolean;
       hourlyRate?: number;
+      useBlockRounding?: boolean;
     }
   ) {
     if (userId === actorId) {
@@ -190,6 +199,13 @@ export class AuthService {
         await tx.employee.update({
           where: { id: user.employeeId },
           data: { hourlyRate: dto.hourlyRate },
+        });
+      }
+
+      if (user.employeeId && dto.useBlockRounding !== undefined) {
+        await tx.employee.update({
+          where: { id: user.employeeId },
+          data: { useBlockRounding: dto.useBlockRounding },
         });
       }
 
@@ -234,6 +250,7 @@ export class AuthService {
       isActive: updated.isActive,
       employeeId: updated.employeeId,
       hourlyRate: updated.employee ? Number(updated.employee.hourlyRate) : null,
+      useBlockRounding: updated.employee?.useBlockRounding ?? null,
     };
   }
 

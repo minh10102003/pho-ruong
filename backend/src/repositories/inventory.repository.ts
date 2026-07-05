@@ -118,6 +118,40 @@ export class InventoryRepository {
     });
   }
 
+  async findReceiptById(id: string) {
+    return prisma.inventoryReceipt.findUnique({
+      where: { id },
+      include: { ingredient: true },
+    });
+  }
+
+  async deleteReceipt(id: string) {
+    return prisma.$transaction(async (tx) => {
+      const receipt = await tx.inventoryReceipt.findUnique({
+        where: { id },
+        include: { ingredient: true },
+      });
+      if (!receipt) throw new Error('Không tìm thấy phiếu nhập');
+
+      const ingredient = await tx.ingredient.findUnique({
+        where: { id: receipt.ingredientId },
+      });
+      if (!ingredient) throw new Error('Không tìm thấy nguyên liệu');
+
+      const nextStock = ingredient.stockQty.sub(receipt.quantity);
+      if (nextStock.lessThan(0)) {
+        throw new Error('Không thể xóa phiếu nhập vì tồn kho hiện tại không đủ');
+      }
+
+      await tx.ingredient.update({
+        where: { id: receipt.ingredientId },
+        data: { stockQty: nextStock },
+      });
+      await tx.inventoryReceipt.delete({ where: { id } });
+      return receipt;
+    });
+  }
+
   // Tổng chi phí nhập hàng theo khoảng thời gian (dùng cho báo cáo)
   async getImportCostByPeriod(start: Date, end: Date) {
     return prisma.$queryRaw<{ total_cost: number }[]>`

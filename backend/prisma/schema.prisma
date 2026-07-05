@@ -149,11 +149,13 @@ model Employee {
   phone       String?
   role        EmployeeRole @default(STAFF)
   hourlyRate  Decimal      @db.Decimal(12, 2) // Lương theo giờ
+  useBlockRounding Boolean  @default(false) // Tính giờ theo khối 30 phút
   isActive    Boolean      @default(true)
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   timesheets  Timesheet[]
   checkInRequests CheckInRequest[]
+  checkOutRequests CheckOutRequest[]
   user        User?
 
   @@map("employees")
@@ -169,8 +171,25 @@ model Timesheet {
   createdAt  DateTime  @default(now())
   employee   Employee  @relation(fields: [employeeId], references: [id])
   checkInRequest CheckInRequest?
+  checkOutRequest CheckOutRequest?
 
   @@map("timesheets")
+}
+
+/// Yêu cầu check-out chờ quản lý duyệt
+model CheckOutRequest {
+  id           String               @id @default(uuid())
+  employeeId   String
+  timesheetId  String               @unique
+  status       CheckInRequestStatus @default(PENDING)
+  requestedAt  DateTime             @default(now())
+  reviewedAt   DateTime?
+  reviewedById String?
+  rejectReason String?
+  employee     Employee             @relation(fields: [employeeId], references: [id])
+  timesheet    Timesheet            @relation(fields: [timesheetId], references: [id])
+
+  @@map("check_out_requests")
 }
 
 /// Yêu cầu check-in chờ quản lý duyệt

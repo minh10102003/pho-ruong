@@ -21,6 +21,7 @@ interface OrderManageState {
     paymentMethod?: PaymentMethod
   ) => Promise<Order | null>;
   removeOrderItem: (orderId: string, itemId: string) => Promise<Order | null>;
+  deleteOrder: (orderId: string) => Promise<void>;
 }
 
 export const useOrderManageStore = create<OrderManageState>((set, get) => ({
@@ -89,6 +90,18 @@ export const useOrderManageStore = create<OrderManageState>((set, get) => ({
     } catch (e) {
       set({ error: (e as Error).message, loading: false });
       return null;
+    }
+  },
+
+  deleteOrder: async (orderId) => {
+    set({ loading: true, error: null });
+    try {
+      await api.deleteOrder(orderId);
+      await get().fetchAll();
+      set({ loading: false });
+    } catch (e) {
+      set({ error: (e as Error).message, loading: false });
+      throw e;
     }
   },
 }));

@@ -80,5 +80,10 @@ router.delete(
   '/orders/:orderId/items/:itemId',
   orderController.removeOrderItem
 );
+router.delete(
+  '/orders/:id',
+  requireRoles('MANAGER', 'ADMIN'),
+  orderController.deleteOrder
+);
 
 export default router;

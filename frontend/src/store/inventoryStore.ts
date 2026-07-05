@@ -30,6 +30,7 @@ interface InventoryState {
     note?: string;
     receivedAt?: string;
   }) => Promise<void>;
+  deleteReceipt: (id: string) => Promise<void>;
 }
 
 export const useInventoryStore = create<InventoryState>((set, get) => ({
@@ -98,6 +99,19 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     set({ loading: true });
     try {
       await api.createReceipt(data);
+      await get().fetchIngredients();
+      await get().fetchReceipts();
+      set({ loading: false });
+    } catch (e) {
+      set({ error: (e as Error).message, loading: false });
+      throw e;
+    }
+  },
+
+  deleteReceipt: async (id) => {
+    set({ loading: true });
+    try {
+      await api.deleteReceipt(id);
       await get().fetchIngredients();
       await get().fetchReceipts();
       set({ loading: false });

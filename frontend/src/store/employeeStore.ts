@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Employee, PayrollEntry, Timesheet, CheckInRequest } from '../types';
+import { Employee, PayrollEntry, Timesheet, CheckInRequest, CheckOutRequest } from '../types';
 import { AppRole } from '../types/auth';
 import { api } from '../services/api';
 
@@ -17,6 +17,8 @@ interface EmployeeState {
   currentTimesheet: Timesheet | null;
   pendingCheckInRequests: CheckInRequest[];
   myPendingCheckInRequest: CheckInRequest | null;
+  pendingCheckOutRequests: CheckOutRequest[];
+  myPendingCheckOutRequest: CheckOutRequest | null;
   payroll: PayrollEntry[];
   loading: boolean;
   error: string | null;
@@ -28,12 +30,14 @@ interface EmployeeState {
     fullName: string;
     phone?: string;
     hourlyRate: number;
+    useBlockRounding?: boolean;
   }) => Promise<void>;
   createStaffAccount: (data: {
     fullName: string;
     phone: string;
     password: string;
     hourlyRate: number;
+    useBlockRounding?: boolean;
   }) => Promise<void>;
   updateEmployee: (
     id: string,
@@ -41,6 +45,7 @@ interface EmployeeState {
       fullName?: string;
       phone?: string | null;
       hourlyRate?: number;
+      useBlockRounding?: boolean;
     }
   ) => Promise<void>;
   checkIn: (employeeId: string) => Promise<void>;
@@ -50,6 +55,12 @@ interface EmployeeState {
   fetchMyPendingCheckInRequest: () => Promise<void>;
   approveCheckInRequest: (requestId: string) => Promise<void>;
   rejectCheckInRequest: (requestId: string, rejectReason?: string) => Promise<void>;
+  requestCheckOut: (timesheetId: string) => Promise<void>;
+  cancelMyCheckOutRequest: () => Promise<void>;
+  fetchPendingCheckOutRequests: () => Promise<void>;
+  fetchMyPendingCheckOutRequest: () => Promise<void>;
+  approveCheckOutRequest: (requestId: string) => Promise<void>;
+  rejectCheckOutRequest: (requestId: string, rejectReason?: string) => Promise<void>;
   checkOut: (timesheetId: string) => Promise<void>;
   fetchPayroll: (year: number, month: number, employeeId?: string, silent?: boolean) => Promise<void>;
 }
@@ -60,6 +71,8 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
   currentTimesheet: null,
   pendingCheckInRequests: [],
   myPendingCheckInRequest: null,
+  pendingCheckOutRequests: [],
+  myPendingCheckOutRequest: null,
   payroll: [],
   loading: false,
   error: null,
@@ -227,6 +240,75 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
     }
   },
 
+  requestCheckOut: async (timesheetId) => {
+    set({ loading: true, error: null });
+    try {
+      const request = await api.requestCheckOut(timesheetId);
+      set({ myPendingCheckOutRequest: request, loading: false });
+    } catch (e) {
+      set({ error: (e as Error).message, loading: false });
+      throw e;
+    }
+  },
+
+  cancelMyCheckOutRequest: async () => {
+    set({ loading: true, error: null });
+    try {
+      await api.cancelMyCheckOutRequest();
+      set({ myPendingCheckOutRequest: null, loading: false });
+    } catch (e) {
+      set({ error: (e as Error).message, loading: false });
+      throw e;
+    }
+  },
+
+  fetchPendingCheckOutRequests: async () => {
+    try {
+      const pendingCheckOutRequests = await api.getPendingCheckOutRequests();
+      set({ pendingCheckOutRequests });
+    } catch (e) {
+      set({ error: (e as Error).message });
+    }
+  },
+
+  fetchMyPendingCheckOutRequest: async () => {
+    try {
+      const myPendingCheckOutRequest = await api.getMyPendingCheckOutRequest();
+      set({ myPendingCheckOutRequest });
+    } catch (e) {
+      set({ error: (e as Error).message });
+    }
+  },
+
+  approveCheckOutRequest: async (requestId) => {
+    set({ loading: true, error: null });
+    try {
+      await api.approveCheckOutRequest(requestId);
+      set((state) => {
+        const pendingCheckOutRequests = state.pendingCheckOutRequests.filter((r) => r.id !== requestId);
+        return { pendingCheckOutRequests, loading: false };
+      });
+      await get().fetchOpenTimesheets();
+    } catch (e) {
+      set({ error: (e as Error).message, loading: false });
+      throw e;
+    }
+  },
+
+  rejectCheckOutRequest: async (requestId, rejectReason) => {
+    set({ loading: true, error: null });
+    try {
+      await api.rejectCheckOutRequest(requestId, rejectReason);
+      set((state) => ({
+        pendingCheckOutRequests: state.pendingCheckOutRequests.filter((r) => r.id !== requestId),
+        loading: false,
+      }));
+    } catch (e) {
+      set({ error: (e as Error).message, loading: false });
+      throw e;
+    }
+  },
+
   checkOut: async (timesheetId) => {
     set({ loading: true });
     try {
@@ -283,23 +365,28 @@ export function refreshEmployeeData(
   return Promise.all(tasks);
 }
 
-/** Cập nhật dữ liệu check-in qua socket — không bật loading toàn màn hình */
+/** Cập nhật dữ liệu chấm công qua socket — không bật loading toàn màn hình */
 export async function refreshCheckInRealtimeData(params: {
   role: AppRole;
   employeeId?: string;
   eventEmployeeId?: string;
+  action?: import('../types').CheckInSocketPayload['action'];
 }) {
   const {
     fetchPendingCheckInRequests,
+    fetchPendingCheckOutRequests,
     fetchMyPendingCheckInRequest,
+    fetchMyPendingCheckOutRequest,
     fetchOpenTimesheets,
     syncCurrentTimesheet,
     fetchEmployees,
+    fetchPayroll,
   } = useEmployeeStore.getState();
 
   if (params.role === 'MANAGER' || params.role === 'ADMIN') {
     await Promise.all([
       fetchPendingCheckInRequests(),
+      fetchPendingCheckOutRequests(),
       fetchOpenTimesheets(),
       fetchEmployees(true),
     ]);
@@ -310,7 +397,14 @@ export async function refreshCheckInRealtimeData(params: {
     if (params.eventEmployeeId && params.eventEmployeeId !== params.employeeId) {
       return;
     }
-    await fetchMyPendingCheckInRequest();
-    await syncCurrentTimesheet(params.employeeId);
+    await Promise.all([
+      fetchMyPendingCheckInRequest(),
+      fetchMyPendingCheckOutRequest(),
+      syncCurrentTimesheet(params.employeeId),
+    ]);
+    if (params.action === 'checkout_approved') {
+      const now = new Date();
+      await fetchPayroll(now.getFullYear(), now.getMonth() + 1, params.employeeId, true);
+    }
   }
 }

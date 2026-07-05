@@ -10,7 +10,9 @@ const TAB_BAR_HEIGHT = 76;
 const TAB_ICON_SIZE = 28;
 
 export default function ManagerLayout() {
-  const pendingCount = useEmployeeStore((s) => s.pendingCheckInRequests.length);
+  const pendingCount =
+    useEmployeeStore((s) => s.pendingCheckInRequests.length) +
+    useEmployeeStore((s) => s.pendingCheckOutRequests.length);
 
   return (
     <View style={{ flex: 1 }}>

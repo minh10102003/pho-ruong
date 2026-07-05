@@ -1,5 +1,6 @@
 import { employeeRepository } from '../repositories/employee.repository';
 import { CreateEmployeeDto, CheckInDto, CheckOutDto, UpdateEmployeeDto } from '../types';
+import { calculateTimesheetHours, calculateTimesheetSalary } from '../utils/timesheetBilling';
 import { orderWsHub } from '../websocket/orderHub';
 
 // Service - xử lý nghiệp vụ module Nhân viên & Lương
@@ -28,6 +29,7 @@ export class EmployeeService {
       phone: dto.phone,
       role: 'STAFF',
       hourlyRate: dto.hourlyRate,
+      useBlockRounding: dto.useBlockRounding ?? false,
     });
     orderWsHub.broadcastEmployeeUpdate({ action: 'create', employeeId: employee.id });
     return employee;
@@ -42,6 +44,7 @@ export class EmployeeService {
       ...(dto.phone !== undefined && { phone: dto.phone }),
       ...(dto.hourlyRate !== undefined && { hourlyRate: dto.hourlyRate }),
       ...(dto.isActive !== undefined && { isActive: dto.isActive }),
+      ...(dto.useBlockRounding !== undefined && { useBlockRounding: dto.useBlockRounding }),
     });
     orderWsHub.broadcastEmployeeUpdate({ action: 'update', employeeId: id });
     return updated;
@@ -87,17 +90,19 @@ export class EmployeeService {
       month
     );
 
+    const useBlockRounding = employee.useBlockRounding;
     let totalHours = 0;
     for (const sheet of timesheets) {
       if (sheet.checkOut) {
-        const hours =
-          (sheet.checkOut.getTime() - sheet.checkIn.getTime()) / (1000 * 60 * 60);
-        totalHours += hours;
+        totalHours += calculateTimesheetHours(sheet.checkIn, sheet.checkOut, useBlockRounding);
       }
     }
 
     const hourlyRate = Number(employee.hourlyRate);
-    const totalSalary = totalHours * hourlyRate;
+    const totalSalary = timesheets.reduce((sum, sheet) => {
+      if (!sheet.checkOut) return sum;
+      return sum + calculateTimesheetSalary(sheet.checkIn, sheet.checkOut, hourlyRate, useBlockRounding);
+    }, 0);
 
     return {
       employee,

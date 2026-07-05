@@ -90,6 +90,7 @@ export interface Employee {
   phone?: string;
   role: string;
   hourlyRate: string | number;
+  useBlockRounding?: boolean;
 }
 
 export interface Timesheet {
@@ -111,8 +112,29 @@ export interface CheckInRequest {
   employee: Employee;
 }
 
+export interface CheckOutRequest {
+  id: string;
+  employeeId: string;
+  timesheetId: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  requestedAt: string;
+  reviewedAt?: string | null;
+  reviewedById?: string | null;
+  rejectReason?: string | null;
+  employee: Employee;
+  timesheet?: Timesheet;
+}
+
 export interface CheckInSocketPayload {
-  action: 'requested' | 'approved' | 'rejected' | 'cancelled';
+  action:
+    | 'requested'
+    | 'approved'
+    | 'rejected'
+    | 'cancelled'
+    | 'checkout_requested'
+    | 'checkout_approved'
+    | 'checkout_rejected'
+    | 'checkout_cancelled';
   requestId: string;
   employeeId: string;
   employeeName?: string;

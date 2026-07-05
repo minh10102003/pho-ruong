@@ -20,8 +20,10 @@ import { confirmAsync } from '../../utils/confirm';
 import { Ingredient } from '../../types';
 import { InventoryCategoryItem } from '../../types/admin';
 import { formatQuantity } from '../../utils/inventory';
+import { formatCurrency, formatReceiptDate } from '../../utils/format';
+import { InventoryReceipt } from '../../types';
 
-type InventoryTab = 'categories' | 'ingredients';
+type InventoryTab = 'categories' | 'ingredients' | 'receipts';
 
 function TabSwitch({
   active,
@@ -48,6 +50,14 @@ function TabSwitch({
           Nguyên liệu
         </Text>
       </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.tabBtn, active === 'receipts' && styles.tabBtnActive]}
+        onPress={() => onChange('receipts')}
+      >
+        <Text style={[styles.tabText, active === 'receipts' && styles.tabTextActive]}>
+          Nhập hàng
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -56,6 +66,7 @@ export default function AdminInventoryScreen() {
   const [activeTab, setActiveTab] = useState<InventoryTab>('categories');
   const [categories, setCategories] = useState<InventoryCategoryItem[]>([]);
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
+  const [receipts, setReceipts] = useState<InventoryReceipt[]>([]);
   const [loading, setLoading] = useState(false);
 
   const [categoryModal, setCategoryModal] = useState(false);
@@ -72,12 +83,14 @@ export default function AdminInventoryScreen() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [cats, items] = await Promise.all([
+      const [cats, items, receiptList] = await Promise.all([
         api.getInventoryCategories(),
         api.getIngredients(),
+        api.getReceipts(),
       ]);
       setCategories(cats);
       setIngredients(items);
+      setReceipts(receiptList);
     } catch (e) {
       Alert.alert('Lỗi', (e as Error).message);
     } finally {
@@ -204,6 +217,20 @@ export default function AdminInventoryScreen() {
     }
   };
 
+  const removeReceipt = async (receipt: InventoryReceipt) => {
+    const ok = await confirmAsync(
+      'Xóa phiếu nhập',
+      `Xóa phiếu ${receipt.receiptCode}? Tồn kho sẽ được trừ lại tương ứng.`
+    );
+    if (!ok) return;
+    try {
+      await api.deleteReceipt(receipt.id);
+      await loadData();
+    } catch (e) {
+      Alert.alert('Lỗi', (e as Error).message);
+    }
+  };
+
   const groupedIngredients = useMemo(() => {
     const map = new Map<string, Ingredient[]>();
     for (const item of ingredients) {
@@ -245,7 +272,7 @@ export default function AdminInventoryScreen() {
               <Text style={styles.empty}>Chưa có hạng mục</Text>
             ) : null}
           </>
-        ) : (
+        ) : activeTab === 'ingredients' ? (
           <>
             <BigButton title="+ Thêm nguyên liệu" onPress={openAddIngredient} />
             {Array.from(groupedIngredients.entries()).map(([category, items]) => (
@@ -269,6 +296,31 @@ export default function AdminInventoryScreen() {
             ))}
             {!loading && ingredients.length === 0 ? (
               <Text style={styles.empty}>Chưa có nguyên liệu</Text>
+            ) : null}
+          </>
+        ) : (
+          <>
+            <Text style={styles.receiptHint}>Lịch sử phiếu nhập hàng — có thể xóa nếu nhập nhầm.</Text>
+            {receipts.map((receipt) => (
+              <View key={receipt.id} style={styles.receiptCard}>
+                <View style={styles.receiptMain}>
+                  <Text style={styles.receiptCode}>{receipt.receiptCode}</Text>
+                  <Text style={styles.cardTitle}>
+                    {receipt.ingredient.category} / {receipt.ingredient.name}
+                  </Text>
+                  <Text style={styles.cardMeta}>
+                    {formatReceiptDate(receipt.receivedAt)} · {formatQuantity(receipt.quantity)}{' '}
+                    {receipt.ingredient.unit} · NCC: {receipt.supplier}
+                  </Text>
+                  <Text style={styles.receiptCost}>{formatCurrency(receipt.totalCost)}</Text>
+                </View>
+                <TouchableOpacity onPress={() => void removeReceipt(receipt)} hitSlop={8}>
+                  <Ionicons name="trash-outline" size={20} color={COLORS.error} />
+                </TouchableOpacity>
+              </View>
+            ))}
+            {!loading && receipts.length === 0 ? (
+              <Text style={styles.empty}>Chưa có phiếu nhập</Text>
             ) : null}
           </>
         )}
@@ -403,6 +455,20 @@ const styles = StyleSheet.create({
   cardMain: { flex: 1 },
   cardTitle: { fontSize: 16, fontWeight: '700', color: COLORS.text },
   cardMeta: { fontSize: 13, color: COLORS.textSecondary, marginTop: 4 },
+  receiptHint: { fontSize: 13, color: COLORS.textSecondary, marginBottom: 4 },
+  receiptCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    backgroundColor: COLORS.surface,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: 14,
+  },
+  receiptMain: { flex: 1 },
+  receiptCode: { fontWeight: '700', color: COLORS.primary },
+  receiptCost: { fontWeight: '700', color: COLORS.success, marginTop: 6 },
   empty: { textAlign: 'center', color: COLORS.textSecondary, padding: 24 },
   modalOverlay: {
     flex: 1,

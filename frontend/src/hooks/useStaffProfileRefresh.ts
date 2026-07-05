@@ -10,6 +10,7 @@ export function useStaffProfileRefresh(
 ) {
   const syncCurrentTimesheet = useEmployeeStore((s) => s.syncCurrentTimesheet);
   const fetchMyPendingCheckInRequest = useEmployeeStore((s) => s.fetchMyPendingCheckInRequest);
+  const fetchMyPendingCheckOutRequest = useEmployeeStore((s) => s.fetchMyPendingCheckOutRequest);
   const fetchPayroll = useEmployeeStore((s) => s.fetchPayroll);
 
   useFocusEffect(
@@ -17,6 +18,7 @@ export function useStaffProfileRefresh(
       if (!employeeId) return;
       void syncCurrentTimesheet(employeeId);
       void fetchMyPendingCheckInRequest();
+      void fetchMyPendingCheckOutRequest();
       void fetchPayroll(payrollYear, payrollMonth, employeeId, true);
     }, [
       employeeId,
@@ -24,6 +26,7 @@ export function useStaffProfileRefresh(
       payrollMonth,
       syncCurrentTimesheet,
       fetchMyPendingCheckInRequest,
+      fetchMyPendingCheckOutRequest,
       fetchPayroll,
     ])
   );

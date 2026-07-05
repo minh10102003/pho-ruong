@@ -73,13 +73,16 @@ export class EmployeeController {
   checkOut = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const user = req.user!;
+      if (user.role === 'STAFF') {
+        res.status(403).json({
+          success: false,
+          error: 'Nhân viên cần gửi yêu cầu check-out để quản lý duyệt',
+        });
+        return;
+      }
       const sheet = await employeeService.getTimesheetById(req.body.timesheetId);
       if (!sheet) {
         res.status(404).json({ success: false, error: 'Không tìm thấy ca làm' });
-        return;
-      }
-      if (user.role === 'STAFF' && user.employeeId !== sheet.employeeId) {
-        res.status(403).json({ success: false, error: 'Chỉ được check-out ca của chính mình' });
         return;
       }
       const data = await employeeService.checkOut(req.body);

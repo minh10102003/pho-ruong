@@ -372,6 +372,10 @@ export class OrderRepository {
     `;
   }
 
+  async deleteOrder(id: string) {
+    return prisma.order.delete({ where: { id } });
+  }
+
   async getYearlyRevenue() {
     return prisma.$queryRaw<
       { year: number; revenue: number; order_count: bigint }[]

@@ -27,14 +27,16 @@ export default function StaffProfileScreen() {
   const {
     openTimesheets,
     myPendingCheckInRequest,
+    myPendingCheckOutRequest,
     payroll,
     loading,
     requestCheckIn,
     cancelMyCheckInRequest,
-    checkOut,
+    requestCheckOut,
+    cancelMyCheckOutRequest,
     fetchPayroll,
     fetchMyPendingCheckInRequest,
-    syncCurrentTimesheet,
+    fetchMyPendingCheckOutRequest,
   } = useEmployeeStore();
 
   const employeeId = user?.employeeId ?? '';
@@ -43,7 +45,10 @@ export default function StaffProfileScreen() {
 
   const openTimesheet = employeeId ? openTimesheets[employeeId] : null;
   const payrollEntry = Array.isArray(payroll) ? payroll[0] : payroll;
-  const pendingRequest = myPendingCheckInRequest?.status === 'PENDING' ? myPendingCheckInRequest : null;
+  const pendingCheckIn =
+    myPendingCheckInRequest?.status === 'PENDING' ? myPendingCheckInRequest : null;
+  const pendingCheckOut =
+    myPendingCheckOutRequest?.status === 'PENDING' ? myPendingCheckOutRequest : null;
 
   useStaffProfileRefresh(employeeId, payrollYear, payrollMonth);
 
@@ -75,12 +80,29 @@ export default function StaffProfileScreen() {
     }
   };
 
-  const handleCheckOut = async () => {
+  const handleRequestCheckOut = async () => {
     if (!openTimesheet) return;
     try {
-      await checkOut(openTimesheet.id);
-      await fetchPayroll(payrollYear, payrollMonth, employeeId);
-      Alert.alert('Thành công', 'Check-out thành công!');
+      await requestCheckOut(openTimesheet.id);
+      showToast({
+        title: 'Đã gửi yêu cầu',
+        message: 'Yêu cầu check-out đang chờ quản lý duyệt.',
+        type: 'info',
+      });
+    } catch (e) {
+      Alert.alert('Lỗi', (e as Error).message);
+    }
+  };
+
+  const handleCancelCheckOutRequest = async () => {
+    try {
+      await cancelMyCheckOutRequest();
+      await fetchMyPendingCheckOutRequest();
+      showToast({
+        title: 'Đã hủy',
+        message: 'Đã hủy yêu cầu check-out.',
+        type: 'info',
+      });
     } catch (e) {
       Alert.alert('Lỗi', (e as Error).message);
     }
@@ -116,14 +138,38 @@ export default function StaffProfileScreen() {
             <Text style={styles.meta}>
               Bắt đầu tính giờ: {new Date(openTimesheet.checkIn).toLocaleString('vi-VN')}
             </Text>
-            <BigButton title="Check-out" onPress={handleCheckOut} loading={loading} />
+            {pendingCheckOut ? (
+              <>
+                <View style={styles.pendingBadge}>
+                  <Text style={styles.pendingTitle}>Chờ quản lý duyệt check-out</Text>
+                  <Text style={styles.meta}>
+                    Gửi lúc: {new Date(pendingCheckOut.requestedAt).toLocaleString('vi-VN')}
+                  </Text>
+                  <Text style={styles.pendingHint}>
+                    Ca làm chỉ kết thúc sau khi quản lý duyệt check-out.
+                  </Text>
+                </View>
+                <BigButton
+                  title="Hủy yêu cầu check-out"
+                  onPress={handleCancelCheckOutRequest}
+                  loading={loading}
+                  variant="outline"
+                />
+              </>
+            ) : (
+              <BigButton
+                title="Gửi yêu cầu check-out"
+                onPress={handleRequestCheckOut}
+                loading={loading}
+              />
+            )}
           </>
-        ) : pendingRequest ? (
+        ) : pendingCheckIn ? (
           <>
             <View style={styles.pendingBadge}>
               <Text style={styles.pendingTitle}>Chờ quản lý duyệt</Text>
               <Text style={styles.meta}>
-                Gửi lúc: {new Date(pendingRequest.requestedAt).toLocaleString('vi-VN')}
+                Gửi lúc: {new Date(pendingCheckIn.requestedAt).toLocaleString('vi-VN')}
               </Text>
               <Text style={styles.pendingHint}>
                 Thời gian ca làm chỉ được tính sau khi quản lý duyệt check-in.

@@ -8,6 +8,7 @@ import {
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useInventoryStore } from '../store/inventoryStore';
 import { BigButton } from '../components/BigButton';
 import {
@@ -17,6 +18,8 @@ import {
 import { COLORS } from '../constants';
 import { formatCurrency, formatReceiptDate } from '../utils/format';
 import { formStyles } from '../styles/formStyles';
+import { confirmAsync } from '../utils/confirm';
+import { useAuthStore } from '../store/authStore';
 import { formatQuantity, isLowStock, parseQuantity } from '../utils/inventory';
 import {
   ReceiptDateMode,
@@ -29,7 +32,7 @@ function parsePositiveNumber(value: string) {
 
 // Màn hình Quản lý Kho & Phiếu nhập hàng
 export default function InventoryScreen() {
-  const { ingredients, receipts, loading, fetchIngredients, fetchReceipts, createReceipt } =
+  const { ingredients, receipts, loading, fetchIngredients, fetchReceipts, createReceipt, deleteReceipt } =
     useInventoryStore();
 
   const [selectedCategory, setSelectedCategory] = useState('');
@@ -89,6 +92,22 @@ export default function InventoryScreen() {
 
   const selectedIngredient =
     ingredients.find((ingredient) => ingredient.id === selectedIngredientId) ?? null;
+
+  const user = useAuthStore((s) => s.user);
+  const canDeleteReceipt = user?.role === 'MANAGER' || user?.role === 'ADMIN';
+
+  const handleDeleteReceipt = async (receiptId: string, receiptCode: string) => {
+    const confirmed = await confirmAsync(
+      'Xóa phiếu nhập',
+      `Xóa phiếu ${receiptCode}? Tồn kho sẽ được trừ lại tương ứng.`
+    );
+    if (!confirmed) return;
+    try {
+      await deleteReceipt(receiptId);
+    } catch (e) {
+      Alert.alert('Lỗi', (e as Error).message);
+    }
+  };
 
   const handleCreateReceipt = async () => {
     if (!selectedIngredient) {
@@ -270,15 +289,27 @@ export default function InventoryScreen() {
         ) : (
           receipts.map((r) => (
             <View key={r.id} style={styles.receiptCard}>
-              <Text style={styles.receiptCode}>{r.receiptCode}</Text>
-              <Text style={styles.receiptName}>
-                {r.ingredient.category} / {r.ingredient.name}
-              </Text>
-              <Text style={styles.receiptMeta}>
-                {formatReceiptDate(r.receivedAt)} · {formatQuantity(r.quantity)} {r.ingredient.unit} · NCC:{' '}
-                {r.supplier}
-              </Text>
-              <Text style={styles.receiptCost}>{formatCurrency(r.totalCost)}</Text>
+              <View style={styles.receiptHeader}>
+                <View style={styles.receiptMain}>
+                  <Text style={styles.receiptCode}>{r.receiptCode}</Text>
+                  <Text style={styles.receiptName}>
+                    {r.ingredient.category} / {r.ingredient.name}
+                  </Text>
+                  <Text style={styles.receiptMeta}>
+                    {formatReceiptDate(r.receivedAt)} · {formatQuantity(r.quantity)} {r.ingredient.unit} · NCC:{' '}
+                    {r.supplier}
+                  </Text>
+                  <Text style={styles.receiptCost}>{formatCurrency(r.totalCost)}</Text>
+                </View>
+                {canDeleteReceipt ? (
+                  <TouchableOpacity
+                    onPress={() => void handleDeleteReceipt(r.id, r.receiptCode)}
+                    hitSlop={8}
+                  >
+                    <Ionicons name="trash-outline" size={20} color={COLORS.error} />
+                  </TouchableOpacity>
+                ) : null}
+              </View>
             </View>
           ))
         )}
@@ -399,6 +430,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
+  receiptHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  receiptMain: { flex: 1 },
   receiptCode: { fontWeight: '700', color: COLORS.primary },
   receiptName: { fontSize: 15, fontWeight: '600', color: COLORS.text, marginTop: 4 },
   receiptMeta: { fontSize: 13, color: COLORS.textSecondary, marginTop: 2 },

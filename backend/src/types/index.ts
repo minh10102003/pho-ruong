@@ -68,6 +68,7 @@ export interface CreateEmployeeDto {
   fullName: string;
   phone?: string;
   hourlyRate: number;
+  useBlockRounding?: boolean;
 }
 
 export interface UpdateEmployeeDto {
@@ -75,6 +76,7 @@ export interface UpdateEmployeeDto {
   phone?: string | null;
   hourlyRate?: number;
   isActive?: boolean;
+  useBlockRounding?: boolean;
 }
 
 export interface CheckInDto {

@@ -8,6 +8,7 @@ import {
   Modal,
   TextInput,
   TouchableOpacity,
+  Switch,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useEmployeeStore } from '../store/employeeStore';
@@ -53,6 +54,7 @@ function EmployeeFormModal({
     phone?: string;
     password?: string;
     hourlyRate: number;
+    useBlockRounding?: boolean;
   }) => void;
   loading: boolean;
 }) {
@@ -60,6 +62,7 @@ function EmployeeFormModal({
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [hourlyRate, setHourlyRate] = useState('');
+  const [useBlockRounding, setUseBlockRounding] = useState(false);
 
   useEffect(() => {
     if (visible) {
@@ -67,6 +70,7 @@ function EmployeeFormModal({
       setPhone(employee?.phone ?? '');
       setPassword('');
       setHourlyRate(employee ? String(Number(employee.hourlyRate)) : '');
+      setUseBlockRounding(employee?.useBlockRounding ?? false);
     }
   }, [visible, employee]);
 
@@ -93,6 +97,7 @@ function EmployeeFormModal({
       phone: phone.trim() || undefined,
       password: mode === 'add' ? password : undefined,
       hourlyRate: parsedRate,
+      useBlockRounding,
     });
   };
 
@@ -159,6 +164,20 @@ function EmployeeFormModal({
             keyboardType="number-pad"
           />
 
+          <View style={styles.switchRow}>
+            <View style={styles.switchTextWrap}>
+              <Text style={formStyles.label}>Tính giờ theo khối 30 phút</Text>
+              <Text style={styles.switchHint}>
+                Bật: làm tròn xuống mốc 30 phút (VD checkout 14:45 tính đến 14:30). Tắt: tính theo phút thực tế.
+              </Text>
+            </View>
+            <Switch
+              value={useBlockRounding}
+              onValueChange={setUseBlockRounding}
+              trackColor={{ false: COLORS.border, true: COLORS.primary }}
+            />
+          </View>
+
           <BigButton
             title="Lưu"
             onPress={handleSave}
@@ -176,6 +195,7 @@ export default function EmployeeScreen() {
   const {
     employees,
     pendingCheckInRequests,
+    pendingCheckOutRequests,
     payroll,
     loading,
     createEmployee,
@@ -184,6 +204,8 @@ export default function EmployeeScreen() {
     fetchPayroll,
     approveCheckInRequest,
     rejectCheckInRequest,
+    approveCheckOutRequest,
+    rejectCheckOutRequest,
   } = useEmployeeStore();
 
   const [formVisible, setFormVisible] = useState(false);
@@ -248,6 +270,7 @@ export default function EmployeeScreen() {
     phone?: string;
     password?: string;
     hourlyRate: number;
+    useBlockRounding?: boolean;
   }) => {
     try {
       if (formMode === 'add') {
@@ -256,6 +279,7 @@ export default function EmployeeScreen() {
           phone: data.phone!,
           password: data.password!,
           hourlyRate: data.hourlyRate,
+          useBlockRounding: data.useBlockRounding,
         });
         Alert.alert('Thành công', 'Đã tạo nhân viên và tài khoản đăng nhập');
       } else if (editingEmployee) {
@@ -307,6 +331,45 @@ export default function EmployeeScreen() {
     }
   };
 
+  const handleApproveCheckOut = async (requestId: string, employeeName: string) => {
+    setActingRequestId(requestId);
+    try {
+      await approveCheckOutRequest(requestId);
+      await fetchPayroll(payrollYear, payrollMonth);
+      showToast({
+        title: 'Đã duyệt',
+        message: `${employeeName} đã kết thúc ca làm.`,
+        type: 'success',
+      });
+    } catch (e) {
+      Alert.alert('Lỗi', (e as Error).message);
+    } finally {
+      setActingRequestId(null);
+    }
+  };
+
+  const handleRejectCheckOut = async (requestId: string, employeeName: string) => {
+    const confirmed = await confirmAsync(
+      'Từ chối check-out',
+      `Xác nhận từ chối yêu cầu check-out của ${employeeName}?`
+    );
+    if (!confirmed) return;
+
+    setActingRequestId(requestId);
+    try {
+      await rejectCheckOutRequest(requestId);
+      showToast({
+        title: 'Đã từ chối',
+        message: `Đã từ chối check-out của ${employeeName}.`,
+        type: 'warning',
+      });
+    } catch (e) {
+      Alert.alert('Lỗi', (e as Error).message);
+    } finally {
+      setActingRequestId(null);
+    }
+  };
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.section}>
@@ -349,6 +412,45 @@ export default function EmployeeScreen() {
       </View>
 
       <View style={styles.section}>
+        <Text style={formStyles.sectionTitle}>
+          Duyệt check-out
+          {pendingCheckOutRequests.length > 0 ? ` (${pendingCheckOutRequests.length})` : ''}
+        </Text>
+        {pendingCheckOutRequests.length === 0 ? (
+          <Text style={styles.emptyInline}>Không có yêu cầu chờ duyệt.</Text>
+        ) : (
+          pendingCheckOutRequests.map((request) => {
+            const isActing = actingRequestId === request.id;
+            return (
+              <View key={request.id} style={styles.approvalCard}>
+                <Text style={styles.empName}>{request.employee.fullName}</Text>
+                <Text style={styles.approvalMeta}>
+                  Gửi lúc: {new Date(request.requestedAt).toLocaleString('vi-VN')}
+                </Text>
+                <View style={styles.approvalActions}>
+                  <BigButton
+                    title="Duyệt"
+                    onPress={() => handleApproveCheckOut(request.id, request.employee.fullName)}
+                    loading={isActing}
+                    disabled={actingRequestId !== null && !isActing}
+                    style={styles.approvalBtn}
+                  />
+                  <BigButton
+                    title="Từ chối"
+                    onPress={() => void handleRejectCheckOut(request.id, request.employee.fullName)}
+                    variant="outline"
+                    loading={isActing}
+                    disabled={actingRequestId !== null && !isActing}
+                    style={styles.approvalBtn}
+                  />
+                </View>
+              </View>
+            );
+          })
+        )}
+      </View>
+
+      <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={formStyles.sectionTitleInline}>Quản lý nhân viên</Text>
           <BigButton title="+ Thêm" onPress={openAddForm} style={styles.addBtn} />
@@ -367,6 +469,9 @@ export default function EmployeeScreen() {
               <View style={styles.empCardInfo}>
                 <Text style={styles.empName}>{item.fullName}</Text>
                 <Text style={styles.empMeta}>{formatCurrency(item.hourlyRate)}/giờ</Text>
+                {item.useBlockRounding ? (
+                  <Text style={styles.empPhone}>Tính giờ theo khối 30 phút</Text>
+                ) : null}
                 {item.phone ? <Text style={styles.empPhone}>{item.phone}</Text> : null}
               </View>
               <Text style={styles.editHint}>Sửa</Text>
@@ -487,6 +592,15 @@ const styles = StyleSheet.create({
   approvalMeta: { fontSize: 13, color: COLORS.textSecondary },
   approvalActions: { flexDirection: 'row', gap: 8 },
   approvalBtn: { flex: 1 },
+  switchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginTop: 4,
+  },
+  switchTextWrap: { flex: 1 },
+  switchHint: { fontSize: 12, color: COLORS.textSecondary, lineHeight: 17, marginTop: 2 },
   periodNav: {
     flexDirection: 'row',
     alignItems: 'center',

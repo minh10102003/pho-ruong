@@ -8,6 +8,7 @@ export interface ManagedUser {
   isActive: boolean;
   employeeId: string | null;
   hourlyRate: number | null;
+  useBlockRounding: boolean | null;
 }
 
 export interface InventoryCategoryItem {

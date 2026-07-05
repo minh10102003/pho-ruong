@@ -210,6 +210,18 @@ export class OrderService {
     notifyOrderUpdate(updated ?? { id: orderId, deleted: true });
     return updated;
   }
+
+  async deletePaidOrder(orderId: string) {
+    const order = await orderRepository.findOrderById(orderId);
+    if (!order) throw new Error('Không tìm thấy đơn hàng');
+    if (order.status !== OrderStatus.PAID) {
+      throw new Error('Chỉ xóa đơn đã thanh toán trong lịch sử');
+    }
+
+    await orderRepository.deleteOrder(orderId);
+    notifyOrderUpdate({ id: orderId, deleted: true });
+    return { deleted: true };
+  }
 }
 
 export const orderService = new OrderService();

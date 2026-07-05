@@ -4,6 +4,7 @@ import { validateBody } from '../middleware/validate';
 import { requireRoles } from '../middleware/auth';
 import { employeeController } from '../controllers/employee.controller';
 import { checkInController } from '../controllers/checkin.controller';
+import { checkOutController } from '../controllers/checkout.controller';
 
 const router = Router();
 
@@ -11,6 +12,7 @@ const employeeSchema = z.object({
   fullName: z.string().min(1),
   phone: z.string().optional(),
   hourlyRate: z.number().positive(),
+  useBlockRounding: z.boolean().optional(),
 });
 
 const checkInSchema = z.object({
@@ -35,6 +37,7 @@ const updateEmployeeSchema = z.object({
   phone: z.string().nullable().optional(),
   hourlyRate: z.number().positive().optional(),
   isActive: z.boolean().optional(),
+  useBlockRounding: z.boolean().optional(),
 });
 
 router.get('/employees', requireRoles('MANAGER', 'ADMIN'), employeeController.getEmployees);
@@ -80,12 +83,40 @@ router.post(
 );
 router.post('/timesheets/check-in-requests/mine/cancel', checkInController.cancelMyRequest);
 router.post(
+  '/timesheets/request-check-out',
+  validateBody(checkOutSchema),
+  checkOutController.requestCheckOut
+);
+router.get(
+  '/timesheets/check-out-requests/pending',
+  requireRoles('MANAGER', 'ADMIN'),
+  checkOutController.getPendingRequests
+);
+router.get('/timesheets/check-out-requests/mine', checkOutController.getMyPendingRequest);
+router.post(
+  '/timesheets/check-out-requests/:id/approve',
+  requireRoles('MANAGER', 'ADMIN'),
+  checkOutController.approveRequest
+);
+router.post(
+  '/timesheets/check-out-requests/:id/reject',
+  requireRoles('MANAGER', 'ADMIN'),
+  validateBody(rejectCheckInSchema),
+  checkOutController.rejectRequest
+);
+router.post('/timesheets/check-out-requests/mine/cancel', checkOutController.cancelMyRequest);
+router.post(
   '/timesheets/check-in',
   requireRoles('MANAGER', 'ADMIN'),
   validateBody(checkInSchema),
   employeeController.checkIn
 );
-router.post('/timesheets/check-out', validateBody(checkOutSchema), employeeController.checkOut);
+router.post(
+  '/timesheets/check-out',
+  requireRoles('MANAGER', 'ADMIN'),
+  validateBody(checkOutSchema),
+  employeeController.checkOut
+);
 router.get('/payroll', employeeController.getPayroll);
 
 export default router;
