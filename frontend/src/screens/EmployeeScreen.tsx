@@ -11,12 +11,13 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useEmployeeStore } from '../store/employeeStore';
-import { useCheckInRealtime } from '../hooks/useCheckInRealtime';
+import { useEmployeeScreenRefresh } from '../hooks/useEmployeeScreenRefresh';
 import { BigButton } from '../components/BigButton';
 import { COLORS } from '../constants';
 import { formatCurrency } from '../utils/format';
 import { formStyles, FORM_SPACING } from '../styles/formStyles';
 import { confirmAsync } from '../utils/confirm';
+import { useNotificationStore } from '../store/notificationStore';
 import { Employee } from '../types';
 
 type FormMode = 'add' | 'edit';
@@ -189,6 +190,7 @@ export default function EmployeeScreen() {
   const [formMode, setFormMode] = useState<FormMode>('add');
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [actingRequestId, setActingRequestId] = useState<string | null>(null);
+  const showToast = useNotificationStore((s) => s.showToast);
 
   const currentPeriod = getCurrentPeriod();
   const [payrollYear, setPayrollYear] = useState(currentPeriod.year);
@@ -200,7 +202,7 @@ export default function EmployeeScreen() {
   const payrollWithHours = payroll.filter((entry) => entry.totalHours > 0);
   const totalPayroll = payrollWithHours.reduce((sum, entry) => sum + entry.totalSalary, 0);
 
-  useCheckInRealtime(payrollYear, payrollMonth);
+  useEmployeeScreenRefresh(payrollYear, payrollMonth);
 
   useEffect(() => {
     fetchPayroll(payrollYear, payrollMonth);
@@ -271,7 +273,11 @@ export default function EmployeeScreen() {
     setActingRequestId(requestId);
     try {
       await approveCheckInRequest(requestId);
-      Alert.alert('Đã duyệt', `${employeeName} đã bắt đầu ca làm.`);
+      showToast({
+        title: 'Đã duyệt',
+        message: `${employeeName} đã bắt đầu ca làm.`,
+        type: 'success',
+      });
     } catch (e) {
       Alert.alert('Lỗi', (e as Error).message);
     } finally {
@@ -289,7 +295,11 @@ export default function EmployeeScreen() {
     setActingRequestId(requestId);
     try {
       await rejectCheckInRequest(requestId);
-      Alert.alert('Đã từ chối', 'Nhân viên sẽ nhận thông báo.');
+      showToast({
+        title: 'Đã từ chối',
+        message: `Đã từ chối check-in của ${employeeName}.`,
+        type: 'warning',
+      });
     } catch (e) {
       Alert.alert('Lỗi', (e as Error).message);
     } finally {

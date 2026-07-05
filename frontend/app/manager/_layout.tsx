@@ -1,14 +1,21 @@
 import { Tabs } from 'expo-router';
+import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../src/constants';
 import { SettingsHeaderButton } from '../../src/components/SettingsHeaderButton';
+import { CheckInNotificationLayer } from '../../src/components/CheckInNotificationLayer';
+import { useEmployeeStore } from '../../src/store/employeeStore';
 
 const TAB_BAR_HEIGHT = 76;
 const TAB_ICON_SIZE = 28;
 
 export default function ManagerLayout() {
+  const pendingCount = useEmployeeStore((s) => s.pendingCheckInRequests.length);
+
   return (
-    <Tabs
+    <View style={{ flex: 1 }}>
+      <CheckInNotificationLayer />
+      <Tabs
       screenOptions={{
         tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: COLORS.textSecondary,
@@ -62,6 +69,7 @@ export default function ManagerLayout() {
         name="employees"
         options={{
           title: 'Nhân viên',
+          tabBarBadge: pendingCount > 0 ? pendingCount : undefined,
           tabBarIcon: ({ color }) => (
             <Ionicons name="people" size={TAB_ICON_SIZE} color={color} />
           ),
@@ -84,5 +92,6 @@ export default function ManagerLayout() {
         }}
       />
     </Tabs>
+    </View>
   );
 }

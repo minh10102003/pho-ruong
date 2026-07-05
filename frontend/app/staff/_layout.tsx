@@ -1,13 +1,17 @@
 import { Tabs } from 'expo-router';
+import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../src/constants';
+import { CheckInNotificationLayer } from '../../src/components/CheckInNotificationLayer';
 
 const TAB_BAR_HEIGHT = 76;
 const TAB_ICON_SIZE = 28;
 
 export default function StaffLayout() {
   return (
-    <Tabs
+    <View style={{ flex: 1 }}>
+      <CheckInNotificationLayer />
+      <Tabs
       screenOptions={{
         tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: COLORS.textSecondary,
@@ -66,5 +70,6 @@ export default function StaffLayout() {
         }}
       />
     </Tabs>
+    </View>
   );
 }

@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../store/authStore';
 import { useEmployeeStore } from '../store/employeeStore';
-import { useCheckInRealtime } from '../hooks/useCheckInRealtime';
+import { useStaffProfileRefresh } from '../hooks/useStaffProfileRefresh';
+import { useNotificationStore } from '../store/notificationStore';
 import { BigButton } from '../components/BigButton';
 import { COLORS } from '../constants';
 import { formStyles } from '../styles/formStyles';
@@ -22,6 +23,7 @@ export default function StaffProfileScreen() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
+  const showToast = useNotificationStore((s) => s.showToast);
   const {
     openTimesheets,
     myPendingCheckInRequest,
@@ -31,6 +33,8 @@ export default function StaffProfileScreen() {
     cancelMyCheckInRequest,
     checkOut,
     fetchPayroll,
+    fetchMyPendingCheckInRequest,
+    syncCurrentTimesheet,
   } = useEmployeeStore();
 
   const employeeId = user?.employeeId ?? '';
@@ -41,18 +45,17 @@ export default function StaffProfileScreen() {
   const payrollEntry = Array.isArray(payroll) ? payroll[0] : payroll;
   const pendingRequest = myPendingCheckInRequest?.status === 'PENDING' ? myPendingCheckInRequest : null;
 
-  const refreshAll = useCheckInRealtime(payrollYear, payrollMonth);
-
-  useEffect(() => {
-    if (!employeeId) return;
-    void fetchPayroll(payrollYear, payrollMonth, employeeId);
-  }, [employeeId, payrollYear, payrollMonth, fetchPayroll]);
+  useStaffProfileRefresh(employeeId, payrollYear, payrollMonth);
 
   const handleRequestCheckIn = async () => {
     if (!employeeId) return;
     try {
       await requestCheckIn(employeeId);
-      Alert.alert('Đã gửi', 'Yêu cầu check-in đang chờ quản lý duyệt.');
+      showToast({
+        title: 'Đã gửi yêu cầu',
+        message: 'Yêu cầu check-in đang chờ quản lý duyệt.',
+        type: 'info',
+      });
     } catch (e) {
       Alert.alert('Lỗi', (e as Error).message);
     }
@@ -61,8 +64,12 @@ export default function StaffProfileScreen() {
   const handleCancelRequest = async () => {
     try {
       await cancelMyCheckInRequest();
-      await refreshAll();
-      Alert.alert('Đã hủy', 'Đã hủy yêu cầu check-in.');
+      await fetchMyPendingCheckInRequest();
+      showToast({
+        title: 'Đã hủy',
+        message: 'Đã hủy yêu cầu check-in.',
+        type: 'info',
+      });
     } catch (e) {
       Alert.alert('Lỗi', (e as Error).message);
     }
