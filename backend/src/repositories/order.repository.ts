@@ -278,7 +278,7 @@ export class OrderRepository {
       include: {
         items: { include: { menuItem: true } },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: 'asc' },
     });
   }
 
