@@ -99,7 +99,7 @@ export default function PosMenuScreen() {
   useFocusEffect(
     useCallback(() => {
       if (selectedTable === null) {
-        router.replace('/');
+        router.replace('..');
         return;
       }
       fetchMenu();
@@ -331,7 +331,7 @@ export default function PosMenuScreen() {
       : `Đơn ${order.orderNumber} - ${getTableDisplayLabel(table)} đã được gửi!`;
 
     clearTableSession();
-    router.replace('/');
+    router.replace('..');
     Alert.alert('Thành công', message);
   };
 

@@ -1,8 +1,14 @@
 import { Decimal } from '@prisma/client/runtime/library';
 import { orderRepository } from '../repositories/order.repository';
 import { orderWsHub } from '../websocket/orderHub';
+import { socketHub } from '../websocket/socketHub';
 import { CreateOrderDto, CreateMenuItemDto, OrderStatus, PaymentMethod, UpdateMenuItemDto } from '../types';
 import { encodeOrderItemMeta } from '../utils/orderItemMeta';
+
+function notifyOrderUpdate(payload: unknown) {
+  orderWsHub.broadcastOrderUpdate(payload);
+  socketHub.emitOrderUpdate(payload);
+}
 
 type OrderItemInput = {
   menuItemId: string;
@@ -98,7 +104,7 @@ export class OrderService {
           existingOrder.id,
           orderItemsData
         );
-        orderWsHub.broadcastOrderUpdate(order);
+        notifyOrderUpdate(order);
         return order;
       }
     }
@@ -115,7 +121,7 @@ export class OrderService {
       items: { create: orderItemsData },
     });
 
-    orderWsHub.broadcastOrderUpdate(order);
+    notifyOrderUpdate(order);
     return order;
   }
 
@@ -146,13 +152,13 @@ export class OrderService {
         );
         if (servedOrder) {
           const order = await orderRepository.mergeOrderIntoOrder(servedOrder.id, id);
-          orderWsHub.broadcastOrderUpdate(order);
+          notifyOrderUpdate(order);
           return order;
         }
       }
 
       const order = await orderRepository.updateOrderStatus(id, status, paymentMethod);
-      orderWsHub.broadcastOrderUpdate(order);
+      notifyOrderUpdate(order);
       return order;
     }
 
@@ -174,7 +180,7 @@ export class OrderService {
     }
 
     const order = await orderRepository.updateOrderStatus(id, status, paymentMethod);
-    orderWsHub.broadcastOrderUpdate(order);
+    notifyOrderUpdate(order);
     return order;
   }
 
@@ -187,7 +193,7 @@ export class OrderService {
     }
 
     const updated = await orderRepository.removeOrderItem(orderId, itemId);
-    orderWsHub.broadcastOrderUpdate(updated ?? { id: orderId, deleted: true });
+    notifyOrderUpdate(updated ?? { id: orderId, deleted: true });
     return updated;
   }
 }

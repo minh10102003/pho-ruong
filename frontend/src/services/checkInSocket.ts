@@ -5,12 +5,16 @@ import { CheckInSocketPayload } from '../types';
 
 type Role = 'STAFF' | 'MANAGER' | 'ADMIN';
 
+const usePollingOnly = Platform.OS === 'web';
+
 let socket: Socket | null = null;
-const listeners = new Set<(payload: CheckInSocketPayload) => void>();
+const checkInListeners = new Set<(payload: CheckInSocketPayload) => void>();
+const orderListeners = new Set<() => void>();
 let joinedRole: Role | null = null;
 let joinedEmployeeId: string | null = null;
 
 function applyJoin(client: Socket) {
+  client.emit('join', 'pos');
   if (joinedRole === 'MANAGER' || joinedRole === 'ADMIN') {
     client.emit('join', 'managers');
   }
@@ -23,9 +27,8 @@ function getSocket(): Socket {
   if (!socket) {
     socket = io(API_ORIGIN, {
       path: '/socket.io',
-      // Polling trước — ổn định hơn qua proxy Render/CDN; nâng cấp lên WS khi được.
-      transports: Platform.OS === 'web' ? ['polling', 'websocket'] : ['websocket', 'polling'],
-      upgrade: true,
+      transports: usePollingOnly ? ['polling'] : ['websocket', 'polling'],
+      upgrade: !usePollingOnly,
       reconnection: true,
       reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
@@ -34,7 +37,11 @@ function getSocket(): Socket {
     });
 
     socket.on('checkin:update', (payload: CheckInSocketPayload) => {
-      listeners.forEach((listener) => listener(payload));
+      checkInListeners.forEach((listener) => listener(payload));
+    });
+
+    socket.on('order:update', () => {
+      orderListeners.forEach((listener) => listener());
     });
 
     socket.on('connect', () => {
@@ -75,9 +82,18 @@ export function connectCheckInSocket(options: {
   onUpdate: (payload: CheckInSocketPayload) => void;
 }) {
   ensureJoined(options.role, options.employeeId);
-  listeners.add(options.onUpdate);
+  checkInListeners.add(options.onUpdate);
 
   return () => {
-    listeners.delete(options.onUpdate);
+    checkInListeners.delete(options.onUpdate);
+  };
+}
+
+export function subscribeOrderUpdates(onUpdate: () => void, role: Role) {
+  ensureJoined(role);
+  orderListeners.add(onUpdate);
+
+  return () => {
+    orderListeners.delete(onUpdate);
   };
 }

@@ -22,6 +22,7 @@ class SocketHub {
       transports: ['polling', 'websocket'],
       pingTimeout: 60_000,
       pingInterval: 25_000,
+      allowUpgrades: true,
     });
 
     this.io.on('connection', (socket) => {
@@ -29,7 +30,7 @@ class SocketHub {
 
       socket.on('join', (room: unknown) => {
         if (typeof room !== 'string') return;
-        if (room === 'managers' || room.startsWith('staff:')) {
+        if (room === 'managers' || room === 'pos' || room.startsWith('staff:')) {
           socket.join(room);
         }
       });
@@ -40,6 +41,11 @@ class SocketHub {
     if (!this.io) return;
     this.io.to('managers').emit('checkin:update', payload);
     this.io.to(`staff:${payload.employeeId}`).emit('checkin:update', payload);
+  }
+
+  emitOrderUpdate(payload: unknown): void {
+    if (!this.io) return;
+    this.io.to('pos').emit('order:update', payload);
   }
 }
 

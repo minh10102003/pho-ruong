@@ -11,6 +11,8 @@ import {
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuthStore } from '../store/authStore';
+import { getPosMenuPath } from '../utils/posRoutes';
 import { useOrderManageStore } from '../store/orderManageStore';
 import { usePosStore } from '../store/posStore';
 import { BigButton } from '../components/BigButton';
@@ -28,7 +30,6 @@ import { getOrderItemDisplayName } from '../utils/orderItemMeta';
 import { playCashPaymentSound, playTransferPaymentSound } from '../utils/sounds';
 import { Order, OrderItem, PaymentMethod } from '../types';
 import { api } from '../services/api';
-import { useAuthStore } from '../store/authStore';
 
 const PAYMENT_BLOCKED_MESSAGE =
   'vẫn còn món chưa ra đủ. Vui lòng đánh dấu đã ra món hết trước khi thanh toán.';
@@ -589,7 +590,7 @@ export default function OrderManageScreen() {
 
     if (nextTable !== null) {
       setSelectedTable(nextTable);
-      router.replace('/menu');
+      router.replace(getPosMenuPath(user?.role));
       return;
     }
 

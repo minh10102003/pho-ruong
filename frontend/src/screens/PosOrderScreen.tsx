@@ -14,7 +14,7 @@ export default function PosOrderScreen() {
           Dùng icon giỏ hàng nổi ở góc dưới màn menu để xem món đang xử lý, thêm món mới,
           sửa ghi chú từng món và gửi đơn mà không cần rời khỏi màn hình.
         </Text>
-        <BigButton title="Quay lại Chọn món" onPress={() => router.replace('/menu')} />
+        <BigButton title="Quay lại Chọn món" onPress={() => router.replace('../menu')} />
       </View>
     </View>
   );

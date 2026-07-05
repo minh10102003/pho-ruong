@@ -1,12 +1,17 @@
 import { useCallback, useEffect } from 'react';
 import { useFocusEffect } from 'expo-router';
+import { Platform } from 'react-native';
 import { useOrderManageStore } from '../store/orderManageStore';
+import { useAuthStore } from '../store/authStore';
+import { subscribeOrderUpdates } from '../services/checkInSocket';
 import { WS_URL } from '../constants';
 
-/** Tải đơn đang xử lý khi màn hình focus + lắng nghe WebSocket realtime */
+/** Tải đơn đang xử lý khi màn hình focus + lắng nghe realtime */
 export function useOrderRealtime() {
   const activeOrders = useOrderManageStore((s) => s.activeOrders);
   const fetchActiveOrders = useOrderManageStore((s) => s.fetchActiveOrders);
+  const user = useAuthStore((s) => s.user);
+  const role = user?.role === 'STAFF' ? 'STAFF' : 'MANAGER';
 
   useFocusEffect(
     useCallback(() => {
@@ -15,6 +20,8 @@ export function useOrderRealtime() {
   );
 
   useEffect(() => {
+    if (!user) return;
+
     let ws: WebSocket | null = null;
     let interval: ReturnType<typeof setInterval> | null = null;
 
@@ -24,7 +31,7 @@ export function useOrderRealtime() {
 
     const startPolling = () => {
       if (!interval) {
-        interval = setInterval(refresh, 10000);
+        interval = setInterval(refresh, 8000);
       }
     };
 
@@ -34,6 +41,13 @@ export function useOrderRealtime() {
         interval = null;
       }
     };
+
+    if (Platform.OS === 'web') {
+      const unsubscribe = subscribeOrderUpdates(refresh, role);
+      return () => {
+        unsubscribe();
+      };
+    }
 
     try {
       ws = new WebSocket(WS_URL);
@@ -50,11 +64,14 @@ export function useOrderRealtime() {
       startPolling();
     }
 
+    const unsubscribe = subscribeOrderUpdates(refresh, role);
+
     return () => {
       ws?.close();
       stopPolling();
+      unsubscribe();
     };
-  }, [fetchActiveOrders]);
+  }, [fetchActiveOrders, role, user]);
 
   return {
     activeOrders,

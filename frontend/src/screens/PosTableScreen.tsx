@@ -48,7 +48,7 @@ export default function PosTableScreen() {
 
   const handleSelectTable = (table: number) => {
     setSelectedTable(table);
-    router.navigate('/menu');
+    router.push('menu');
   };
 
   const renderTableCell = (
