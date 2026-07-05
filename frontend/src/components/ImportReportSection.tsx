@@ -7,31 +7,14 @@ import { formatCurrency, formatReceiptDate, formatReceiptTime } from '../utils/f
 import { formatQuantity } from '../utils/inventory';
 import { ImportCostChart } from './charts/ImportCostChart';
 import { toImportChartData } from '../utils/importReportFormat';
+import { ReportSummaryGrid } from './reports/ReportSectionParts';
 
 type Props = {
   report: ImportReport | null;
   period: 'day' | 'month' | 'year';
-  periodLabel: string;
 };
 
-function SummaryCard({
-  label,
-  value,
-  accent,
-}: {
-  label: string;
-  value: string;
-  accent?: boolean;
-}) {
-  return (
-    <View style={[styles.summaryCard, accent && styles.summaryCardAccent]}>
-      <Text style={styles.summaryLabel}>{label}</Text>
-      <Text style={[styles.summaryValue, accent && styles.summaryValueAccent]}>{value}</Text>
-    </View>
-  );
-}
-
-export function ImportReportSection({ report, period, periodLabel }: Props) {
+export function ImportReportSection({ report, period }: Props) {
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
 
   const chartData = useMemo(
@@ -56,18 +39,14 @@ export function ImportReportSection({ report, period, periodLabel }: Props) {
 
   return (
     <View style={styles.wrapper}>
-      <Text style={styles.periodHint}>Kỳ thống kê: {periodLabel}</Text>
-
-      <View style={styles.summaryGrid}>
-        <SummaryCard
-          label="Tổng chi nhập"
-          value={formatCurrency(report.summary.totalCost)}
-          accent
-        />
-        <SummaryCard label="Số phiếu" value={String(report.summary.receiptCount)} />
-        <SummaryCard label="Hạng mục" value={String(report.summary.categoryCount)} />
-        <SummaryCard label="Mặt hàng" value={String(report.summary.ingredientCount)} />
-      </View>
+      <ReportSummaryGrid
+        items={[
+          { label: 'Tổng chi nhập', value: formatCurrency(report.summary.totalCost) },
+          { label: 'Số phiếu', value: String(report.summary.receiptCount) },
+          { label: 'Hạng mục', value: String(report.summary.categoryCount) },
+          { label: 'Mặt hàng', value: String(report.summary.ingredientCount) },
+        ]}
+      />
 
       <Text style={styles.subTitle}>
         {period === 'day' ? 'Chi phí trong ngày' : period === 'month' ? 'Theo ngày' : 'Theo tháng'}
@@ -157,43 +136,6 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontSize: 14,
     paddingVertical: 8,
-  },
-  periodHint: {
-    fontSize: 13,
-    color: COLORS.textSecondary,
-    fontWeight: '600',
-  },
-  summaryGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  summaryCard: {
-    width: '48%',
-    flexGrow: 1,
-    backgroundColor: COLORS.background,
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  summaryCardAccent: {
-    backgroundColor: COLORS.highlight,
-    borderColor: COLORS.primary,
-  },
-  summaryLabel: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    marginBottom: 4,
-    fontWeight: '600',
-  },
-  summaryValue: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: COLORS.text,
-  },
-  summaryValueAccent: {
-    color: COLORS.primaryDark,
   },
   subTitle: {
     fontSize: 15,

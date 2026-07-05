@@ -13,35 +13,15 @@ import { BigButton } from '../components/BigButton';
 import { RevenueChart } from '../components/charts/RevenueChart';
 import { PaymentMethodChart } from '../components/charts/PaymentMethodChart';
 import { ImportReportSection } from '../components/ImportReportSection';
+import {
+  ReportSectionBanner,
+  ReportSummaryGrid,
+} from '../components/reports/ReportSectionParts';
 import { COLORS } from '../constants';
 import { formatCurrency } from '../utils/format';
 import { formStyles } from '../styles/formStyles';
 import { toRevenueChartData } from '../utils/chartFormat';
 import { formatReportPeriodLabel } from '../utils/importReportFormat';
-
-function SectionBanner({
-  title,
-  subtitle,
-  tone,
-}: {
-  title: string;
-  subtitle: string;
-  tone: 'revenue' | 'import' | 'tax';
-}) {
-  return (
-    <View
-      style={[
-        styles.sectionBanner,
-        tone === 'revenue' && styles.bannerRevenue,
-        tone === 'import' && styles.bannerImport,
-        tone === 'tax' && styles.bannerTax,
-      ]}
-    >
-      <Text style={styles.bannerTitle}>{title}</Text>
-      <Text style={styles.bannerSubtitle}>{subtitle}</Text>
-    </View>
-  );
-}
 
 export default function ReportScreen() {
   const {
@@ -61,6 +41,14 @@ export default function ReportScreen() {
   );
 
   const periodLabel = useMemo(() => formatReportPeriodLabel(period), [period]);
+
+  const revenueSummary = useMemo(
+    () => ({
+      total: chartData.reduce((sum, item) => sum + item.revenue, 0),
+      orders: chartData.reduce((sum, item) => sum + item.orderCount, 0),
+    }),
+    [chartData]
+  );
 
   useEffect(() => {
     fetchAll();
@@ -100,10 +88,15 @@ export default function ReportScreen() {
       ) : null}
 
       <View style={styles.section}>
-        <SectionBanner
+        <ReportSectionBanner
           title="Doanh thu"
           subtitle={`Thống kê bán hàng · ${periodLabel}`}
-          tone="revenue"
+        />
+        <ReportSummaryGrid
+          items={[
+            { label: 'Tổng doanh thu', value: formatCurrency(revenueSummary.total) },
+            { label: 'Tổng đơn', value: String(revenueSummary.orders) },
+          ]}
         />
         <RevenueChart data={chartData} period={period} />
 
@@ -116,24 +109,18 @@ export default function ReportScreen() {
       </View>
 
       <View style={styles.section}>
-        <SectionBanner
+        <ReportSectionBanner
           title="Nhập hàng"
           subtitle={`Thống kê phiếu nhập theo hạng mục · ${periodLabel}`}
-          tone="import"
         />
-        <ImportReportSection
-          report={importReport}
-          period={period}
-          periodLabel={periodLabel}
-        />
+        <ImportReportSection report={importReport} period={period} />
       </View>
 
       {taxReport ? (
         <View style={styles.section}>
-          <SectionBanner
+          <ReportSectionBanner
             title="Thuế & lợi nhuận"
             subtitle={`Tổng hợp tài chính · ${taxReport.taxType} ${taxReport.taxRate}%`}
-            tone="tax"
           />
 
           <View style={styles.taxRow}>
@@ -199,31 +186,6 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     gap: 14,
-  },
-  sectionBanner: {
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 4,
-  },
-  bannerRevenue: {
-    backgroundColor: COLORS.selected,
-  },
-  bannerImport: {
-    backgroundColor: COLORS.highlight,
-  },
-  bannerTax: {
-    backgroundColor: '#FFF4E8',
-  },
-  bannerTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: COLORS.text,
-  },
-  bannerSubtitle: {
-    fontSize: 13,
-    color: COLORS.textSecondary,
-    marginTop: 4,
-    fontWeight: '600',
   },
   inlineBlock: {
     marginTop: 8,

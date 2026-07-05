@@ -20,14 +20,6 @@ export function RevenueChart({ data, period }: Props) {
 
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
-  const totals = useMemo(
-    () => ({
-      revenue: data.reduce((sum, item) => sum + item.revenue, 0),
-      orders: data.reduce((sum, item) => sum + item.orderCount, 0),
-    }),
-    [data]
-  );
-
   const maxRevenue = useMemo(
     () => Math.max(...data.map((item) => item.revenue), 1),
     [data]
@@ -57,17 +49,6 @@ export function RevenueChart({ data, period }: Props) {
 
   return (
     <View style={styles.wrapper}>
-      <View style={styles.summaryRow}>
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>Tổng doanh thu</Text>
-          <Text style={styles.summaryValue}>{formatCurrency(totals.revenue)}</Text>
-        </View>
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>Tổng đơn</Text>
-          <Text style={styles.summaryValue}>{totals.orders}</Text>
-        </View>
-      </View>
-
       <View style={[styles.chartBox, { width: chartWidth }]}>
         <BarChart
           data={barData}
@@ -123,15 +104,6 @@ export function RevenueChart({ data, period }: Props) {
 const styles = StyleSheet.create({
   wrapper: { gap: 12 },
   empty: { textAlign: 'center', color: COLORS.textSecondary, padding: 20 },
-  summaryRow: { flexDirection: 'row', gap: 10 },
-  summaryCard: {
-    flex: 1,
-    backgroundColor: COLORS.selected,
-    borderRadius: 10,
-    padding: 12,
-  },
-  summaryLabel: { fontSize: 12, color: COLORS.textSecondary, marginBottom: 4 },
-  summaryValue: { fontSize: 16, fontWeight: '700', color: COLORS.primary },
   chartBox: { alignSelf: 'center', overflow: 'hidden' },
   axisText: { color: COLORS.textSecondary, fontSize: 11 },
   hint: {
