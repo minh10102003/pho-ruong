@@ -2,6 +2,7 @@ import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
 const API_PORT = process.env.EXPO_PUBLIC_API_PORT ?? '3000';
+const PROD_API_ORIGIN = process.env.EXPO_PUBLIC_API_ORIGIN?.trim();
 
 /** IP máy dev — Expo Go truyền qua hostUri khi quét QR */
 function resolveDevHost(): string {
@@ -30,8 +31,36 @@ function resolveDevHost(): string {
   return 'localhost';
 }
 
-const host = resolveDevHost();
+function resolveWsUrl(origin: string): string {
+  const override = process.env.EXPO_PUBLIC_WS_URL?.trim();
+  if (override) return override;
 
-export const API_BASE_URL = `http://${host}:${API_PORT}/api`;
-export const API_ORIGIN = `http://${host}:${API_PORT}`;
-export const WS_URL = `ws://${host}:${API_PORT}/ws`;
+  if (origin.startsWith('https://')) {
+    return `wss://${origin.slice('https://'.length)}/ws`;
+  }
+  if (origin.startsWith('http://')) {
+    return `ws://${origin.slice('http://'.length)}/ws`;
+  }
+  return `ws://${origin}/ws`;
+}
+
+function resolveApiConfig() {
+  if (PROD_API_ORIGIN) {
+    const origin = PROD_API_ORIGIN.replace(/\/$/, '');
+    return {
+      API_BASE_URL: `${origin}/api`,
+      API_ORIGIN: origin,
+      WS_URL: resolveWsUrl(origin),
+    };
+  }
+
+  const host = resolveDevHost();
+  const devOrigin = `http://${host}:${API_PORT}`;
+  return {
+    API_BASE_URL: `${devOrigin}/api`,
+    API_ORIGIN: devOrigin,
+    WS_URL: `ws://${host}:${API_PORT}/ws`,
+  };
+}
+
+export const { API_BASE_URL, API_ORIGIN, WS_URL } = resolveApiConfig();

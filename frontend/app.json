@@ -20,6 +20,10 @@
       },
       "package": "com.pho.restaurant"
     },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
     "plugins": [
       "expo-router",
       "expo-asset"
