@@ -9,8 +9,8 @@ import {
   Modal,
   Alert,
   RefreshControl,
-  Switch,
 } from 'react-native';
+import AppSwitch from '../components/AppSwitch';
 import { useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
 import { useMenuSettingsStore } from '../store/menuSettingsStore';
@@ -217,11 +217,9 @@ export default function SettingsScreen() {
               <Text style={styles.rowPrice}>{formatCurrency(item.price)}</Text>
               {!item.isActive && <Text style={styles.hiddenLabel}>Đang ẩn trên menu</Text>}
             </TouchableOpacity>
-            <Switch
+            <AppSwitch
               value={item.isActive}
               onValueChange={(value) => handleToggleActive(item, value)}
-              trackColor={{ false: COLORS.border, true: COLORS.secondary }}
-              thumbColor={item.isActive ? COLORS.primary : COLORS.textSecondary}
             />
           </View>
         )}
