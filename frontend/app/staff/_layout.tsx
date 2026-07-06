@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../src/constants';
 import { CheckInNotificationLayer } from '../../src/components/CheckInNotificationLayer';
+import { StaffSettingsHeaderButton } from '../../src/components/StaffSettingsHeaderButton';
 import { useRoleFeatures } from '../../src/hooks/useRoleFeatures';
 
 const TAB_BAR_HEIGHT = 76;
@@ -37,6 +38,7 @@ export default function StaffLayout() {
         headerStyle: { backgroundColor: COLORS.primary },
         headerTintColor: '#FFF',
         headerTitleStyle: { fontWeight: '700' },
+        headerRight: () => <StaffSettingsHeaderButton />,
       }}
     >
       <Tabs.Screen
@@ -78,6 +80,13 @@ export default function StaffLayout() {
           tabBarIcon: ({ color }) => (
             <Ionicons name="person" size={TAB_ICON_SIZE} color={color} />
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: 'Cài đặt',
+          href: null,
         }}
       />
     </Tabs>

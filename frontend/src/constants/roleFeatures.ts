@@ -13,6 +13,7 @@ export const ROLE_FEATURE_DEFINITIONS: Record<AppRole, RoleFeatureDefinition[]> 
     { key: 'orders', label: 'Đơn hàng', description: 'Xem và xử lý đơn, thanh toán' },
     { key: 'inventory', label: 'Kho', description: 'Xem tồn kho và tạo phiếu nhập' },
     { key: 'profile', label: 'Cá nhân', description: 'Chấm công và bảng lương cá nhân' },
+    { key: 'settings', label: 'Cài đặt', description: 'Thông tin tài khoản và đăng xuất' },
   ],
   MANAGER: [
     { key: 'pos', label: 'Menu / POS', description: 'Chọn bàn và gọi món' },
@@ -78,6 +79,7 @@ const ROUTE_FEATURE_MAP: Record<AppRole, Record<string, string>> = {
     orders: 'orders',
     inventory: 'inventory',
     employees: 'profile',
+    settings: 'settings',
   },
   MANAGER: {
     '(pos)': 'pos',

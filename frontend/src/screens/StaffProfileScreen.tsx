@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
 import { useAuthStore } from '../store/authStore';
 import { useEmployeeStore } from '../store/employeeStore';
 import { useStaffProfileRefresh } from '../hooks/useStaffProfileRefresh';
@@ -20,9 +19,7 @@ function formatPayrollPeriod(year: number, month: number) {
 }
 
 export default function StaffProfileScreen() {
-  const router = useRouter();
   const user = useAuthStore((s) => s.user);
-  const logout = useAuthStore((s) => s.logout);
   const showToast = useNotificationStore((s) => s.showToast);
   const {
     openTimesheets,
@@ -108,16 +105,10 @@ export default function StaffProfileScreen() {
     }
   };
 
-  const handleLogout = async () => {
-    await logout();
-    router.replace('/login');
-  };
-
   if (!employeeId) {
     return (
       <View style={styles.container}>
         <Text style={styles.empty}>Tài khoản chưa được gắn hồ sơ nhân viên.</Text>
-        <BigButton title="Đăng xuất" onPress={handleLogout} variant="outline" />
       </View>
     );
   }
@@ -205,8 +196,6 @@ export default function StaffProfileScreen() {
           <Text style={styles.meta}>Chưa có dữ liệu chấm công trong tháng này.</Text>
         )}
       </View>
-
-      <BigButton title="Đăng xuất" onPress={handleLogout} variant="outline" />
     </ScrollView>
   );
 }
