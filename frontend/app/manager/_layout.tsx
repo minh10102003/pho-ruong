@@ -5,11 +5,17 @@ import { COLORS } from '../../src/constants';
 import { SettingsHeaderButton } from '../../src/components/SettingsHeaderButton';
 import { CheckInNotificationLayer } from '../../src/components/CheckInNotificationLayer';
 import { useEmployeeStore } from '../../src/store/employeeStore';
+import { useRoleFeatures } from '../../src/hooks/useRoleFeatures';
 
 const TAB_BAR_HEIGHT = 76;
 const TAB_ICON_SIZE = 28;
 
+function tabHref(enabled: boolean) {
+  return enabled ? undefined : null;
+}
+
 export default function ManagerLayout() {
+  const { hasFeature } = useRoleFeatures();
   const pendingCount =
     useEmployeeStore((s) => s.pendingCheckInRequests.length) +
     useEmployeeStore((s) => s.pendingCheckOutRequests.length);
@@ -36,7 +42,7 @@ export default function ManagerLayout() {
         headerStyle: { backgroundColor: COLORS.primary },
         headerTintColor: '#FFF',
         headerTitleStyle: { fontWeight: '700' },
-        headerRight: () => <SettingsHeaderButton />,
+        headerRight: () => (hasFeature('settings') ? <SettingsHeaderButton /> : null),
       }}
     >
       <Tabs.Screen
@@ -44,6 +50,7 @@ export default function ManagerLayout() {
         options={{
           title: 'Menu',
           headerShown: false,
+          href: tabHref(hasFeature('pos')),
           tabBarIcon: ({ color }) => (
             <Ionicons name="restaurant" size={TAB_ICON_SIZE} color={color} />
           ),
@@ -53,6 +60,7 @@ export default function ManagerLayout() {
         name="orders"
         options={{
           title: 'Đơn',
+          href: tabHref(hasFeature('orders')),
           tabBarIcon: ({ color }) => (
             <Ionicons name="receipt" size={TAB_ICON_SIZE} color={color} />
           ),
@@ -62,6 +70,7 @@ export default function ManagerLayout() {
         name="inventory"
         options={{
           title: 'Kho',
+          href: tabHref(hasFeature('inventory')),
           tabBarIcon: ({ color }) => (
             <Ionicons name="cube" size={TAB_ICON_SIZE} color={color} />
           ),
@@ -71,6 +80,7 @@ export default function ManagerLayout() {
         name="employees"
         options={{
           title: 'Nhân viên',
+          href: tabHref(hasFeature('employees')),
           tabBarBadge: pendingCount > 0 ? pendingCount : undefined,
           tabBarIcon: ({ color }) => (
             <Ionicons name="people" size={TAB_ICON_SIZE} color={color} />
@@ -81,6 +91,7 @@ export default function ManagerLayout() {
         name="reports"
         options={{
           title: 'Báo cáo',
+          href: tabHref(hasFeature('reports')),
           tabBarIcon: ({ color }) => (
             <Ionicons name="bar-chart" size={TAB_ICON_SIZE} color={color} />
           ),

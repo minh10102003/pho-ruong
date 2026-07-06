@@ -3,11 +3,18 @@ import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../src/constants';
 import { CheckInNotificationLayer } from '../../src/components/CheckInNotificationLayer';
+import { useRoleFeatures } from '../../src/hooks/useRoleFeatures';
 
 const TAB_BAR_HEIGHT = 76;
 const TAB_ICON_SIZE = 28;
 
+function tabHref(enabled: boolean) {
+  return enabled ? undefined : null;
+}
+
 export default function StaffLayout() {
+  const { hasFeature } = useRoleFeatures();
+
   return (
     <View style={{ flex: 1 }}>
       <CheckInNotificationLayer />
@@ -37,6 +44,7 @@ export default function StaffLayout() {
         options={{
           title: 'Menu',
           headerShown: false,
+          href: tabHref(hasFeature('pos')),
           tabBarIcon: ({ color }) => (
             <Ionicons name="restaurant" size={TAB_ICON_SIZE} color={color} />
           ),
@@ -46,6 +54,7 @@ export default function StaffLayout() {
         name="orders"
         options={{
           title: 'Đơn',
+          href: tabHref(hasFeature('orders')),
           tabBarIcon: ({ color }) => (
             <Ionicons name="receipt" size={TAB_ICON_SIZE} color={color} />
           ),
@@ -55,6 +64,7 @@ export default function StaffLayout() {
         name="inventory"
         options={{
           title: 'Kho',
+          href: tabHref(hasFeature('inventory')),
           tabBarIcon: ({ color }) => (
             <Ionicons name="cube" size={TAB_ICON_SIZE} color={color} />
           ),
@@ -64,6 +74,7 @@ export default function StaffLayout() {
         name="employees"
         options={{
           title: 'Cá nhân',
+          href: tabHref(hasFeature('profile')),
           tabBarIcon: ({ color }) => (
             <Ionicons name="person" size={TAB_ICON_SIZE} color={color} />
           ),

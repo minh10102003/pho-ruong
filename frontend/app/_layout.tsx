@@ -5,6 +5,7 @@ import { installAudioUnlock } from '../src/utils/sounds';
 import AppLoadingScreen from '../src/components/AppLoadingScreen';
 import { useAuthStore, getRoleHomePath } from '../src/store/authStore';
 import { setUnauthorizedHandler } from '../src/services/api';
+import { isRouteAllowed } from '../src/constants/roleFeatures';
 
 const SPLASH_MIN_MS = 1200;
 const HYDRATION_TIMEOUT_MS = 3000;
@@ -82,7 +83,7 @@ export default function RootLayout() {
       if (!currentUser) {
         router.replace('/login');
       } else {
-        router.replace(getRoleHomePath(currentUser.role));
+        router.replace(getRoleHomePath(currentUser.role, currentUser.features));
       }
       return;
     }
@@ -93,22 +94,31 @@ export default function RootLayout() {
     }
 
     if (currentUser && inAuthGroup) {
-      router.replace(getRoleHomePath(currentUser.role));
+      router.replace(getRoleHomePath(currentUser.role, currentUser.features));
       return;
     }
 
     if (currentUser) {
       const area = segments[0];
       if (area === 'admin' && currentUser.role !== 'ADMIN') {
-        router.replace(getRoleHomePath(currentUser.role));
+        router.replace(getRoleHomePath(currentUser.role, currentUser.features));
         return;
       }
       if (area === 'manager' && currentUser.role === 'STAFF') {
-        router.replace('/staff');
+        router.replace(getRoleHomePath('STAFF', currentUser.features));
         return;
       }
       if (area === 'staff' && currentUser.role !== 'STAFF') {
-        router.replace(getRoleHomePath(currentUser.role));
+        router.replace(getRoleHomePath(currentUser.role, currentUser.features));
+        return;
+      }
+
+      const screen = (segments as string[])[1];
+      if (
+        area &&
+        !isRouteAllowed(currentUser.role, area, screen, currentUser.features)
+      ) {
+        router.replace(getRoleHomePath(currentUser.role, currentUser.features));
       }
     }
   }, [navigatorReady, ready, hydrated, sessionChecked, segments, router, user]);

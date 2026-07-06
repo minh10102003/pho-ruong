@@ -214,6 +214,10 @@ async function main() {
   });
   console.log(`✅ Admin seed: ${adminPhone} / ${adminPassword}`);
 
+  const { permissionService } = await import('../src/services/permission.service');
+  await permissionService.initDefaults();
+  console.log('✅ Role features seed');
+
   console.log('✅ Seed hoàn tất!');
 }
 

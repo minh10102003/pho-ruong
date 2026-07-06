@@ -4,12 +4,15 @@ import { userRepository } from '../repositories/user.repository';
 import { hashPassword, verifyPassword } from '../utils/password';
 import { signAuthToken } from '../utils/jwt';
 
+import { permissionService } from './permission.service';
+
 export interface AuthUserDto {
   id: string;
   phone: string;
   role: AppRole;
   displayName: string;
   employeeId: string | null;
+  features: string[];
 }
 
 function toAuthUser(user: {
@@ -18,7 +21,7 @@ function toAuthUser(user: {
   role: AppRole;
   displayName: string;
   employeeId: string | null;
-}): AuthUserDto {
+}): Omit<AuthUserDto, 'features'> {
   return {
     id: user.id,
     phone: user.phone,
@@ -26,6 +29,17 @@ function toAuthUser(user: {
     displayName: user.displayName,
     employeeId: user.employeeId,
   };
+}
+
+async function toAuthUserWithFeatures(user: {
+  id: string;
+  phone: string;
+  role: AppRole;
+  displayName: string;
+  employeeId: string | null;
+}): Promise<AuthUserDto> {
+  const features = await permissionService.getEnabledFeatures(user.role);
+  return { ...toAuthUser(user), features };
 }
 
 export class AuthService {
@@ -44,7 +58,7 @@ export class AuthService {
 
     await userRepository.updateLastLogin(user.id);
 
-    const authUser = toAuthUser(user);
+    const authUser = await toAuthUserWithFeatures(user);
     const token = signAuthToken({
       userId: authUser.id,
       role: authUser.role,
@@ -60,7 +74,7 @@ export class AuthService {
     if (!user || !user.isActive) {
       throw new Error('Tài khoản không tồn tại hoặc đã bị vô hiệu');
     }
-    return toAuthUser(user);
+    return toAuthUserWithFeatures(user);
   }
 
   async createManager(
@@ -82,7 +96,7 @@ export class AuthService {
       createdById,
     });
 
-    return toAuthUser(user);
+    return toAuthUserWithFeatures(user);
   }
 
   async createStaffAccount(
@@ -127,7 +141,7 @@ export class AuthService {
       });
     });
 
-    return toAuthUser(user);
+    return toAuthUserWithFeatures(user);
   }
 
   async changePassword(userId: string, currentPassword: string, newPassword: string) {

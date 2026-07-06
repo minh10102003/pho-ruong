@@ -7,6 +7,7 @@ import employeeRoutes from './routes/employee.routes';
 import reportRoutes from './routes/report.routes';
 import paymentRoutes from './routes/payment.routes';
 import authRoutes from './routes/auth.routes';
+import permissionRoutes from './routes/permission.routes';
 import { errorHandler } from './middleware/validate';
 import { authenticate } from './middleware/auth';
 
@@ -23,6 +24,7 @@ app.get('/health', (_req, res) => {
 
 // Auth (login public)
 app.use('/api/auth', authRoutes);
+app.use('/api/permissions', authenticate, permissionRoutes);
 
 // Protected API routes
 app.use('/api/orders', authenticate, orderRoutes);

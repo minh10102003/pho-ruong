@@ -4,6 +4,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { api } from '../services/api';
 import { AuthUser } from '../types/auth';
 import { isSessionExpired } from '../utils/authSession';
+import { getRoleHomePath as resolveRoleHomePath } from '../constants/roleFeatures';
 
 interface AuthState {
   token: string | null;
@@ -13,6 +14,7 @@ interface AuthState {
   login: (phone: string, password: string) => Promise<AuthUser>;
   logout: () => Promise<void>;
   restoreSession: () => Promise<AuthUser | null>;
+  refreshUser: () => Promise<AuthUser | null>;
   ensureSessionValid: () => boolean;
   setHydrated: (value: boolean) => void;
 }
@@ -68,6 +70,18 @@ export const useAuthStore = create<AuthState>()(
           return null;
         }
       },
+
+      refreshUser: async () => {
+        const { token } = get();
+        if (!token) return null;
+        try {
+          const user = await api.getMe();
+          set({ user });
+          return user;
+        } catch {
+          return null;
+        }
+      },
     }),
     {
       name: 'pho-auth',
@@ -95,8 +109,6 @@ export const useAuthStore = create<AuthState>()(
   )
 );
 
-export function getRoleHomePath(role: AuthUser['role']): string {
-  if (role === 'ADMIN') return '/admin';
-  if (role === 'MANAGER') return '/manager';
-  return '/staff';
+export function getRoleHomePath(role: AuthUser['role'], features?: string[]): string {
+  return resolveRoleHomePath(role, features);
 }

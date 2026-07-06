@@ -1,12 +1,18 @@
 import { Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { usePathname, useRouter } from 'expo-router';
+import { useRoleFeatures } from '../hooks/useRoleFeatures';
 
 const ICON_SIZE = 24;
 
 export function SettingsHeaderButton() {
   const router = useRouter();
   const pathname = usePathname();
+  const { hasFeature } = useRoleFeatures();
+
+  if (!hasFeature('settings')) {
+    return null;
+  }
 
   if (pathname === '/manager/settings' || pathname === '/settings') {
     return null;

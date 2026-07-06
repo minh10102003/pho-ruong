@@ -259,3 +259,15 @@ model User {
 
   @@map("users")
 }
+
+/// Bật/tắt màn hình & chức năng theo vai trò
+model RoleFeature {
+  id         String   @id @default(uuid())
+  role       AppRole
+  featureKey String   @map("feature_key")
+  enabled    Boolean  @default(true)
+  updatedAt  DateTime @updatedAt
+
+  @@unique([role, featureKey])
+  @@map("role_features")
+}

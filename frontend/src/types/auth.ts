@@ -6,4 +6,5 @@ export interface AuthUser {
   role: AppRole;
   displayName: string;
   employeeId: string | null;
+  features?: string[];
 }

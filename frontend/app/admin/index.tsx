@@ -1,5 +1,7 @@
 import { Redirect } from 'expo-router';
+import { useAuthStore, getRoleHomePath } from '../../src/store/authStore';
 
 export default function AdminIndex() {
-  return <Redirect href="/admin/menu" />;
+  const features = useAuthStore((s) => s.user?.features);
+  return <Redirect href={getRoleHomePath('ADMIN', features)} />;
 }

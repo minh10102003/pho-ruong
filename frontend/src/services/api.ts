@@ -61,6 +61,24 @@ class ApiClient {
     return this.request<AuthUser>('/auth/me');
   }
 
+  getRoleFeatures() {
+    return this.request<import('../constants/roleFeatures').RoleFeatureGroup[]>(
+      '/permissions/roles'
+    );
+  }
+
+  updateRoleFeatures(
+    updates: { role: import('../types/auth').AppRole; featureKey: string; enabled: boolean }[]
+  ) {
+    return this.request<import('../constants/roleFeatures').RoleFeatureGroup[]>(
+      '/permissions/roles',
+      {
+        method: 'PATCH',
+        body: JSON.stringify({ updates }),
+      }
+    );
+  }
+
   changePassword(body: { currentPassword: string; newPassword: string }) {
     return this.request<{ message: string }>('/auth/change-password', {
       method: 'POST',

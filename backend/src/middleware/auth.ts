@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { AppRole } from '@prisma/client';
 import { verifyAuthToken } from '../utils/jwt';
+import { permissionService } from '../services/permission.service';
 
 export function authenticate(req: Request, res: Response, next: NextFunction): void {
   const header = req.headers.authorization;
@@ -40,6 +41,21 @@ export function requireRoles(...roles: AppRole[]) {
     }
     if (!roles.includes(req.user.role)) {
       res.status(403).json({ success: false, error: 'Không có quyền truy cập' });
+      return;
+    }
+    next();
+  };
+}
+
+export function requireFeature(featureKey: string) {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    if (!req.user) {
+      res.status(401).json({ success: false, error: 'Chưa đăng nhập' });
+      return;
+    }
+    const enabled = await permissionService.isFeatureEnabled(req.user.role, featureKey);
+    if (!enabled) {
+      res.status(403).json({ success: false, error: 'Chức năng này đã bị tắt cho vai trò của bạn' });
       return;
     }
     next();
