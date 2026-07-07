@@ -19,6 +19,7 @@ import { formatCurrency } from '../utils/format';
 import { formStyles, FORM_SPACING } from '../styles/formStyles';
 import { confirmAsync } from '../utils/confirm';
 import { useNotificationStore } from '../store/notificationStore';
+import { useRoleFeatures } from '../hooks/useRoleFeatures';
 import { Employee } from '../types';
 
 type FormMode = 'add' | 'edit';
@@ -194,6 +195,7 @@ function EmployeeFormModal({
 export default function EmployeeScreen() {
   const {
     employees,
+    openTimesheets,
     pendingCheckInRequests,
     pendingCheckOutRequests,
     payroll,
@@ -206,12 +208,18 @@ export default function EmployeeScreen() {
     rejectCheckInRequest,
     approveCheckOutRequest,
     rejectCheckOutRequest,
+    checkIn,
+    checkOut,
+    fetchOpenTimesheets,
   } = useEmployeeStore();
 
   const [formVisible, setFormVisible] = useState(false);
   const [formMode, setFormMode] = useState<FormMode>('add');
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [actingRequestId, setActingRequestId] = useState<string | null>(null);
+  const [actingDirectEmployeeId, setActingDirectEmployeeId] = useState<string | null>(null);
+  const { hasFeature } = useRoleFeatures();
+  const canDirectAttendance = hasFeature('direct_attendance');
   const showToast = useNotificationStore((s) => s.showToast);
 
   const currentPeriod = getCurrentPeriod();
@@ -370,6 +378,44 @@ export default function EmployeeScreen() {
     }
   };
 
+  const handleDirectCheckIn = async (employee: Employee) => {
+    setActingDirectEmployeeId(employee.id);
+    try {
+      await checkIn(employee.id);
+      await fetchOpenTimesheets();
+      await fetchPayroll(payrollYear, payrollMonth);
+      showToast({
+        title: 'Đã chấm công',
+        message: `Đã check-in trực tiếp cho ${employee.fullName}.`,
+        type: 'success',
+      });
+    } catch (e) {
+      Alert.alert('Lỗi', (e as Error).message);
+    } finally {
+      setActingDirectEmployeeId(null);
+    }
+  };
+
+  const handleDirectCheckOut = async (employee: Employee) => {
+    const open = openTimesheets[employee.id];
+    if (!open) return;
+    setActingDirectEmployeeId(employee.id);
+    try {
+      await checkOut(open.id);
+      await fetchOpenTimesheets();
+      await fetchPayroll(payrollYear, payrollMonth);
+      showToast({
+        title: 'Đã chấm công',
+        message: `Đã check-out trực tiếp cho ${employee.fullName}.`,
+        type: 'success',
+      });
+    } catch (e) {
+      Alert.alert('Lỗi', (e as Error).message);
+    } finally {
+      setActingDirectEmployeeId(null);
+    }
+  };
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.section}>
@@ -449,6 +495,49 @@ export default function EmployeeScreen() {
           })
         )}
       </View>
+
+      {canDirectAttendance ? (
+        <View style={styles.section}>
+          <Text style={formStyles.sectionTitle}>Chấm công trực tiếp (không cần request)</Text>
+          {employees.length === 0 ? (
+            <Text style={styles.emptyInline}>Chưa có nhân viên.</Text>
+          ) : (
+            employees.map((employee) => {
+              const openSheet = openTimesheets[employee.id];
+              const isActing = actingDirectEmployeeId === employee.id;
+              return (
+                <View key={`direct-${employee.id}`} style={styles.empCard}>
+                  <View style={styles.empCardInfo}>
+                    <Text style={styles.empName}>{employee.fullName}</Text>
+                    <Text style={styles.empMeta}>
+                      {openSheet
+                        ? `Đang trong ca từ ${new Date(openSheet.checkIn).toLocaleString('vi-VN')}`
+                        : 'Chưa vào ca'}
+                    </Text>
+                  </View>
+                  {openSheet ? (
+                    <BigButton
+                      title="Check-out"
+                      onPress={() => void handleDirectCheckOut(employee)}
+                      loading={isActing}
+                      disabled={actingDirectEmployeeId !== null && !isActing}
+                      style={styles.directActionBtn}
+                    />
+                  ) : (
+                    <BigButton
+                      title="Check-in"
+                      onPress={() => void handleDirectCheckIn(employee)}
+                      loading={isActing}
+                      disabled={actingDirectEmployeeId !== null && !isActing}
+                      style={styles.directActionBtn}
+                    />
+                  )}
+                </View>
+              );
+            })
+          )}
+        </View>
+      ) : null}
 
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
@@ -592,6 +681,7 @@ const styles = StyleSheet.create({
   approvalMeta: { fontSize: 13, color: COLORS.textSecondary },
   approvalActions: { flexDirection: 'row', gap: 8 },
   approvalBtn: { flex: 1 },
+  directActionBtn: { minWidth: 110, minHeight: 40, paddingHorizontal: 12, paddingVertical: 8 },
   switchRow: {
     flexDirection: 'row',
     alignItems: 'center',

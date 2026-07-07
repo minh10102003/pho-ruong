@@ -20,6 +20,11 @@ export const ROLE_FEATURE_DEFINITIONS: Record<AppRole, RoleFeatureDefinition[]> 
     { key: 'orders', label: 'Đơn hàng', description: 'Quản lý đơn và thanh toán' },
     { key: 'inventory', label: 'Kho', description: 'Quản lý kho và phiếu nhập' },
     { key: 'employees', label: 'Nhân viên', description: 'Chấm công, duyệt ca, bảng lương' },
+    {
+      key: 'direct_attendance',
+      label: 'Chấm công trực tiếp',
+      description: 'Quản lý tự check-in/check-out cho nhân viên, không cần request',
+    },
     { key: 'reports', label: 'Báo cáo', description: 'Thống kê doanh thu, nhập hàng, thuế' },
     { key: 'settings', label: 'Cài đặt', description: 'Cài đặt món ăn và tài khoản' },
   ],

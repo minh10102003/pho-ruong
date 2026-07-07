@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { validateBody } from '../middleware/validate';
-import { requireRoles } from '../middleware/auth';
+import { requireFeature, requireRoles } from '../middleware/auth';
 import { employeeController } from '../controllers/employee.controller';
 import { checkInController } from '../controllers/checkin.controller';
 import { checkOutController } from '../controllers/checkout.controller';
@@ -108,12 +108,14 @@ router.post('/timesheets/check-out-requests/mine/cancel', checkOutController.can
 router.post(
   '/timesheets/check-in',
   requireRoles('MANAGER', 'ADMIN'),
+  requireFeature('direct_attendance'),
   validateBody(checkInSchema),
   employeeController.checkIn
 );
 router.post(
   '/timesheets/check-out',
   requireRoles('MANAGER', 'ADMIN'),
+  requireFeature('direct_attendance'),
   validateBody(checkOutSchema),
   employeeController.checkOut
 );
